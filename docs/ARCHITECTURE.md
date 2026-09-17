@@ -7,3 +7,7 @@
 - Database: Amazon DynamoDB
 - Media: Amazon S3
 - Event Processing: DynamoDB Streams & Amazon EventBridge
+
+## Infrastructure as Code
+- AWS SAM (Serverless Application Model)
+

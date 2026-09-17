@@ -16,7 +16,7 @@ Report-to-Me AI is an AI-powered guardian/guide for people who encounter a real-
 - Event routing: Amazon EventBridge
 
 ## Current Status
-M1.1 Project foundation implemented. (Backend structure, config, domain models). AWS services not yet integrated.
+M1.2 AWS deployment foundation implemented using AWS SAM. GET /api/v1/health endpoint is available.
 
 ## Local Development Setup
 1. Clone the repository
@@ -24,6 +24,13 @@ M1.1 Project foundation implemented. (Backend structure, config, domain models).
 3. Activate virtual environment: `.venv\Scripts\Activate.ps1` (Windows) or `source .venv/bin/activate` (Mac/Linux)
 4. Install dependencies: `pip install -e ".[dev]"`
 5. Copy `.env.example` to `.env` and configure if needed.
+
+## Deployment
+Deploy using AWS SAM:
+```bash
+sam build
+sam deploy --guided
+```
 
 ## Testing
 Run tests using pytest:

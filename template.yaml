@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  report-to-me-ai
+  
+  M1.2 Foundation - Health Endpoint
+
+Globals:
+  Function:
+    Timeout: 3
+    MemorySize: 128
+    Runtime: python3.9
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        APP_NAME: !Ref AppName
+        ENVIRONMENT: !Ref Environment
+        LOG_LEVEL: INFO
+
+Parameters:
+  AppName:
+    Type: String
+    Default: "Report-to-Me AI"
+    Description: Name of the application
+  Environment:
+    Type: String
+    Default: "dev"
+    Description: Environment (dev, staging, prod)
+
+Resources:
+  # HTTP API
+  ReportToMeApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: v1
+
+  # Health Lambda Function
+  HealthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.health.lambda_handler
+      # Implicit IAM Role with minimal permissions (AWSLambdaBasicExecutionRole) is created by SAM
+      Events:
+        Health:
+          Type: HttpApi
+          Properties:
+            Path: /api/v1/health
+            Method: get
+            ApiId: !Ref ReportToMeApi
+      Policies:
+        # Least privilege: only allow cloudwatch logging (which AWSLambdaBasicExecutionRole includes)
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+
+Outputs:
+  HealthApiUrl:
+    Description: "API Gateway endpoint URL for Health check"
+    Value: !Sub "https://${ReportToMeApi}.execute-api.${AWS::Region}.amazonaws.com/v1/api/v1/health"
+  HealthFunctionArn:
+    Description: "Health Lambda Function ARN"
+    Value: !GetAtt HealthFunction.Arn

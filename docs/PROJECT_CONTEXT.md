@@ -3,7 +3,7 @@
 Report-to-Me AI is an AI-powered guardian/guide for people who encounter a real-world problem but do not necessarily know what to do.
 
 ## Current Implementation Stage
-M1.1 Project foundation implemented.
+M1.2 Foundation and AWS SAM deployment established.
 
 ## Current Architecture
 - AWS Amplify-hosted web application (Frontend)
@@ -17,6 +17,8 @@ M1.1 Project foundation implemented.
 
 ## Implemented
 - Project foundation (repository structure, configuration, shared models/enums, logging skeleton, tests)
+- AWS deployment foundation using SAM (Infrastructure as Code)
+- API Gateway HTTP API and Health Lambda (/api/v1/health)
 
 ## Not Implemented Yet
 - Bedrock integration
@@ -27,3 +29,4 @@ M1.1 Project foundation implemented.
 
 ## Next Milestone
 - AWS/backend vertical slice implementation.
+- M1.2 completed: SAM template and health endpoint deployed.
