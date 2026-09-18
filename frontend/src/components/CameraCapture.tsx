@@ -9,6 +9,8 @@ interface CameraCaptureProps {
 export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isHolding, setIsHolding] = useState(false);
+  const holdTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -30,54 +32,109 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
 
     startCamera();
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
+      window.removeEventListener('keydown', handleKeyDown);
       if (stream) {
         stream.getTracks().forEach(t => t.stop());
       }
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+      }
     };
-  }, []);
+  }, [onClose]);
 
   const takePhoto = () => {
     if (!videoRef.current) return;
     
     const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    canvas.width = videoRef.current.videoWidth || 1280;
+    canvas.height = videoRef.current.videoHeight || 720;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
     ctx.drawImage(videoRef.current, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
     onCapture(dataUrl);
   };
 
+  const handlePointerDown = () => {
+    holdTimerRef.current = window.setTimeout(() => {
+      setIsHolding(true);
+    }, 250);
+  };
+
+  const handlePointerUp = () => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+    }
+    if (isHolding) {
+      setIsHolding(false);
+      // Visual indicator for video hold finish (photo captured as fallback in current milestone)
+      takePhoto();
+    } else {
+      takePhoto();
+    }
+  };
+
   return (
-    <div style={{
+    <div className="animate-fade-in" style={{
       position: 'fixed',
       top: 0,
       left: 0,
       width: '100vw',
       height: '100vh',
-      backgroundColor: '#000',
+      backgroundColor: '#000000',
       zIndex: 200,
       display: 'flex',
       flexDirection: 'column'
     }}>
       
+      {/* Top Bar with Safe Area */}
       <div style={{
         position: 'absolute',
-        top: '2rem',
+        top: 'max(1.5rem, env(safe-area-inset-top))',
         left: '1.5rem',
+        right: '1.5rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         zIndex: 210
       }}>
-        <button onClick={onClose} style={{ color: '#fff', padding: '8px' }}>
-          <X size={32} />
+        <button 
+          onClick={onClose} 
+          aria-label="Close camera"
+          style={{ 
+            color: '#ffffff', 
+            padding: '10px',
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <X size={24} strokeWidth={1.75} />
         </button>
+
+        <span style={{ 
+          color: 'rgba(255,255,255,0.7)', 
+          fontSize: '0.8rem',
+          letterSpacing: '1px',
+          textTransform: 'uppercase'
+        }}>
+          {isHolding ? 'Recording Video...' : 'Tap for photo, hold for video'}
+        </span>
       </div>
 
       {errorMsg ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#fff', textAlign: 'center' }}>
-          <p>{errorMsg}</p>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#ffffff', textAlign: 'center' }}>
+          <p style={{ maxWidth: '360px', color: '#94a3b8', lineHeight: 1.5 }}>{errorMsg}</p>
         </div>
       ) : (
         <video 
@@ -96,7 +153,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
       {!errorMsg && (
         <div style={{
           position: 'absolute',
-          bottom: 'max(2rem, env(safe-area-inset-bottom))',
+          bottom: 'max(2.5rem, env(safe-area-inset-bottom))',
           left: 0,
           right: 0,
           display: 'flex',
@@ -104,26 +161,32 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
           alignItems: 'center',
           zIndex: 210
         }}>
-          {/* Capture Button */}
+          {/* Dual-action Capture Button */}
           <button 
-            onClick={takePhoto}
-            aria-label="Take photo"
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            aria-label="Capture photo or video"
             style={{
-              width: '72px',
-              height: '72px',
-              borderRadius: '36px',
-              border: '4px solid #fff',
-              backgroundColor: 'rgba(255,255,255,0.3)',
+              width: '76px',
+              height: '76px',
+              borderRadius: '50%',
+              border: `4px solid ${isHolding ? '#ef4444' : '#ffffff'}`,
+              backgroundColor: isHolding ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.2)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: isHolding ? 'scale(1.15)' : 'scale(1)',
+              boxShadow: isHolding ? '0 0 30px rgba(239, 68, 68, 0.6)' : '0 8px 30px rgba(0,0,0,0.5)'
             }}
           >
             <div style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '28px',
-              backgroundColor: '#fff'
+              width: isHolding ? '36px' : '58px',
+              height: isHolding ? '36px' : '58px',
+              borderRadius: isHolding ? '8px' : '50%',
+              backgroundColor: isHolding ? '#ef4444' : '#ffffff',
+              transition: 'all 0.2s ease'
             }} />
           </button>
         </div>
@@ -132,3 +195,4 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
     </div>
   );
 };
+

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Image, File, Mic } from 'lucide-react';
 
 interface AttachmentSheetProps {
@@ -7,18 +7,31 @@ interface AttachmentSheetProps {
 }
 
 export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCameraClick }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <>
       <div 
+        aria-hidden="true"
         style={{
           position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.4)',
+          backgroundColor: 'rgba(0,0,0,0.5)',
           zIndex: 100,
-          backdropFilter: 'blur(2px)'
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          transition: 'opacity 0.3s ease'
         }}
         onClick={onClose}
       />
@@ -28,41 +41,54 @@ export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCam
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        backgroundColor: 'var(--surface)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
         borderTopLeftRadius: '28px',
         borderTopRightRadius: '28px',
-        padding: '2rem 1.5rem',
+        padding: '1.75rem 1.5rem',
         paddingBottom: 'max(2rem, env(safe-area-inset-bottom))',
         zIndex: 101,
-        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 -20px 60px rgba(0,0,0,0.5)'
+        borderTop: '1px solid var(--border-color)',
+        boxShadow: '0 -20px 60px rgba(0,0,0,0.4)',
+        maxWidth: '640px',
+        margin: '0 auto'
       }}>
         
         <div style={{
-          width: '40px',
+          width: '36px',
           height: '4px',
           backgroundColor: 'var(--border-color)',
           borderRadius: '2px',
           margin: '0 auto 1.5rem auto'
         }} />
 
-        <h3 style={{ marginBottom: '1rem', fontWeight: 500 }}>Add to your report</h3>
+        <h3 style={{ 
+          marginBottom: '1.25rem', 
+          fontWeight: 500,
+          fontSize: '1.1rem',
+          color: 'var(--text-primary)',
+          textAlign: 'center'
+        }}>
+          Add to your report
+        </h3>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
           <button onClick={onCameraClick} style={{
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            padding: '1.2rem',
+            padding: '1.1rem 1.25rem',
             borderRadius: '16px',
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'var(--glass-bg)',
+            border: '1px solid var(--glass-border)',
             width: '100%',
             textAlign: 'left',
-            transition: 'background-color 0.2s'
+            color: 'var(--text-primary)',
+            fontSize: '1rem',
+            minHeight: '52px'
           }}>
-            <Image size={24} />
+            <Image size={22} strokeWidth={1.75} style={{ color: 'var(--accent)' }} />
             <span>Photo or Video</span>
           </button>
           
@@ -70,14 +96,17 @@ export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCam
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            padding: '1.2rem',
+            padding: '1.1rem 1.25rem',
             borderRadius: '16px',
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'var(--glass-bg)',
+            border: '1px solid var(--glass-border)',
             width: '100%',
             textAlign: 'left',
-            transition: 'background-color 0.2s'
+            color: 'var(--text-primary)',
+            fontSize: '1rem',
+            minHeight: '52px'
           }}>
-            <File size={24} />
+            <File size={22} strokeWidth={1.75} style={{ color: 'var(--text-secondary)' }} />
             <span>File</span>
           </button>
 
@@ -85,24 +114,28 @@ export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCam
             display: 'flex',
             alignItems: 'center',
             gap: '1rem',
-            padding: '1.2rem',
+            padding: '1.1rem 1.25rem',
             borderRadius: '16px',
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'var(--glass-bg)',
+            border: '1px solid var(--glass-border)',
             width: '100%',
             textAlign: 'left',
-            transition: 'background-color 0.2s'
+            color: 'var(--text-primary)',
+            fontSize: '1rem',
+            minHeight: '52px'
           }}>
-            <Mic size={24} />
+            <Mic size={22} strokeWidth={1.75} style={{ color: 'var(--text-secondary)' }} />
             <span>Voice Recording</span>
           </button>
         </div>
 
         <button onClick={onClose} style={{
           marginTop: '1rem',
-          padding: '1rem',
+          padding: '0.9rem',
           width: '100%',
           textAlign: 'center',
-          opacity: 0.8
+          color: 'var(--text-muted)',
+          fontSize: '0.95rem'
         }}>
           Cancel
         </button>
@@ -111,3 +144,4 @@ export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCam
     </>
   );
 };
+

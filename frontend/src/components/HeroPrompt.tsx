@@ -8,29 +8,43 @@ export const HeroPrompt: React.FC = () => {
       alignItems: 'center',
       justifyContent: 'center',
       textAlign: 'center',
-      flex: 1,
       width: '100%',
-      maxWidth: '600px',
-      margin: '0 auto',
-      marginTop: '-10vh'
-    }} className="animate-fade-in">
+      maxWidth: '640px',
+      margin: 'auto 0',
+      padding: '2rem 1rem'
+    }}>
       <h1 className="display-text" style={{
-        fontSize: '4.5rem',
-        lineHeight: 1.1,
-        marginBottom: '1rem',
-        fontWeight: 'normal',
-        textShadow: '0 0 40px rgba(255,255,255,0.1)'
+        fontSize: 'clamp(3.5rem, 8vw, 5.2rem)',
+        lineHeight: 1.05,
+        marginBottom: '1.25rem',
+        fontWeight: 400,
+        textShadow: '0 0 50px rgba(255,255,255,0.08)'
       }}>
-        What<br />happened?
+        <span style={{
+          display: 'block',
+          animation: 'titleFirst 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+        }}>
+          What
+        </span>
+        <span style={{
+          display: 'block',
+          animation: 'titleSecond 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards',
+          opacity: 0
+        }}>
+          happened?
+        </span>
       </h1>
       <p style={{
-        fontSize: '1.1rem',
-        opacity: 0.8,
-        letterSpacing: '0.5px',
-        fontWeight: 300
+        fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
+        color: 'var(--text-secondary)',
+        letterSpacing: '0.4px',
+        fontWeight: 300,
+        animation: 'subtitleFade 0.6s ease 0.35s forwards',
+        opacity: 0
       }}>
         Tell us what you noticed.
       </p>
     </div>
   );
 };
+

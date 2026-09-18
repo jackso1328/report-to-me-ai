@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Starfield } from './components/Starfield';
 import { TopBar } from './components/TopBar';
 import { HeroPrompt } from './components/HeroPrompt';
@@ -16,19 +16,28 @@ function App() {
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [result, setResult] = useState<IncidentResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [processingPhase, setProcessingPhase] = useState<number>(1);
+
+  useEffect(() => {
+    let timer: number;
+    if (appState === 'submitting') {
+      setProcessingPhase(1);
+      timer = window.setTimeout(() => {
+        setProcessingPhase(2);
+      }, 1400);
+    }
+    return () => clearTimeout(timer);
+  }, [appState]);
 
   const handleSend = async (text: string, photoDataUrl: string | null) => {
     setAppState('submitting');
     setErrorMsg(null);
     
     try {
-      // In this milestone, we only submit the text observation
-      // S3 upload of the photoDataUrl will be in a future milestone.
-      
       const payload = {
         source: {
           type: 'text',
-          content: text || 'An observation with an image was provided.'
+          content: text || (photoDataUrl ? 'An observation with attached evidence was provided.' : 'An observation was provided.')
         }
       };
 
@@ -60,9 +69,34 @@ function App() {
         )}
         
         {appState === 'submitting' && (
-          <div className="animate-fade-in" style={{ textAlign: 'center', opacity: 0.7 }}>
-            <div style={{ marginBottom: '1rem', fontSize: '2rem' }}>✦</div>
-            <p>Understanding observation...</p>
+          <div className="animate-fade-in" style={{ 
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            maxWidth: '400px',
+            padding: '2rem'
+          }}>
+            <div style={{ 
+              marginBottom: '1.5rem', 
+              fontSize: '2rem',
+              color: 'var(--text-primary)',
+              animation: 'pulseStar 2s ease-in-out infinite'
+            }}>
+              ✦
+            </div>
+            <p style={{
+              fontSize: '1.1rem',
+              color: 'var(--text-secondary)',
+              letterSpacing: '0.3px',
+              fontWeight: 300,
+              transition: 'opacity 0.3s ease'
+            }}>
+              {processingPhase === 1 
+                ? 'Understanding what you noticed...' 
+                : 'Figuring out what might help...'}
+            </p>
           </div>
         )}
 
@@ -71,16 +105,20 @@ function App() {
         )}
 
         {appState === 'error' && (
-          <div className="animate-fade-in" style={{ textAlign: 'center', maxWidth: '400px' }}>
-            <div style={{ marginBottom: '1rem', fontSize: '2rem', color: 'var(--danger)' }}>!</div>
-            <p style={{ marginBottom: '2rem' }}>{errorMsg}</p>
+          <div className="animate-fade-in" style={{ textAlign: 'center', maxWidth: '420px', padding: '2rem' }}>
+            <div style={{ marginBottom: '1.25rem', fontSize: '2rem', color: 'var(--danger)' }}>!</div>
+            <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {errorMsg}
+            </p>
             <button 
               onClick={handleReset}
               style={{
-                padding: '12px 24px',
+                padding: '12px 28px',
                 backgroundColor: 'var(--surface)',
                 borderRadius: '24px',
-                border: '1px solid var(--border-color)'
+                border: '1px solid var(--border-color)',
+                fontSize: '0.95rem',
+                color: 'var(--text-primary)'
               }}
             >
               Try Again
@@ -88,7 +126,7 @@ function App() {
           </div>
         )}
 
-        {/* Floating Composer at Bottom for specific states */}
+        {/* Floating Composer at Bottom for Idle/Error States */}
         {(appState === 'idle' || appState === 'error') && (
           <div style={{
             position: 'absolute',
@@ -96,20 +134,20 @@ function App() {
             left: 0,
             right: 0,
             display: 'flex',
-            justifyContent: 'center',
-            padding: '1rem'
+            justifyContent: 'center'
           }}>
             <MessageComposer 
               onSend={handleSend}
               onCameraClick={() => setAppState('camera')}
-              isSubmitting={appState === 'submitting'}
+              isSubmitting={false}
               capturedPhoto={capturedPhoto}
               onClearPhoto={() => setCapturedPhoto(null)}
             />
           </div>
         )}
 
-        {/* Result Screen Bottom Action */}
+
+        {/* Result Screen Bottom Reset Action */}
         {appState === 'result' && (
           <div style={{
             position: 'absolute',
@@ -117,16 +155,22 @@ function App() {
             left: 0,
             right: 0,
             display: 'flex',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            zIndex: 20
           }}>
              <button 
               onClick={handleReset}
               style={{
-                padding: '12px 24px',
-                backgroundColor: 'var(--surface)',
-                borderRadius: '24px',
-                border: '1px solid var(--border-color)',
-                opacity: 0.8
+                padding: '12px 28px',
+                backgroundColor: 'var(--glass-bg)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                borderRadius: '28px',
+                border: '1px solid var(--glass-border)',
+                color: 'var(--text-secondary)',
+                fontSize: '0.9rem',
+                letterSpacing: '0.3px',
+                boxShadow: 'var(--glass-shadow)'
               }}
             >
               Report another observation
@@ -149,3 +193,4 @@ function App() {
 }
 
 export default App;
+

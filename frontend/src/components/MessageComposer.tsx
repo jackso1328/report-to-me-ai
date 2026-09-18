@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Plus, Mic, Camera, Send } from 'lucide-react';
 import { AttachmentSheet } from './AttachmentSheet';
 import { AttachmentPreview } from './AttachmentPreview';
@@ -19,12 +19,15 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   onClearPhoto
 }) => {
   const [text, setText] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const canSend = (text.trim().length > 0 || capturedPhoto !== null) && !isSubmitting;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if ((text.trim() || capturedPhoto) && !isSubmitting) {
+    if (canSend) {
       onSend(text.trim(), capturedPhoto);
       setText('');
     }
@@ -33,16 +36,16 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   return (
     <div style={{
       width: '100%',
-      maxWidth: '600px',
+      maxWidth: '620px',
       margin: '0 auto',
       position: 'relative',
       zIndex: 20,
-      padding: '1rem',
+      padding: '0.75rem 1rem',
       paddingBottom: 'max(1rem, env(safe-area-inset-bottom))'
     }}>
       
       {capturedPhoto && (
-        <div style={{ marginBottom: '1rem' }}>
+        <div style={{ marginBottom: '0.75rem' }}>
           <AttachmentPreview photoDataUrl={capturedPhoto} onClear={onClearPhoto} />
         </div>
       )}
@@ -52,34 +55,48 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         alignItems: 'center',
         gap: '0.75rem'
       }}>
-        {/* Main Pill */}
+        {/* Main Floating Capsule */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           flex: 1,
-          backgroundColor: 'rgba(30, 41, 59, 0.4)', // transparent dark surface
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '32px',
-          padding: '0.5rem 0.5rem',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+          backgroundColor: 'var(--glass-bg)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: `1px solid ${isFocused ? 'var(--border-focus)' : 'var(--glass-border)'}`,
+          borderRadius: '36px',
+          padding: '0.4rem 0.5rem',
+          boxShadow: isFocused 
+            ? '0 12px 36px rgba(0, 0, 0, 0.35), 0 0 20px rgba(59, 130, 246, 0.12)' 
+            : 'var(--glass-shadow)',
+          transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          opacity: isSubmitting ? 0.6 : 1
         }}>
           <button 
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label="Add attachment"
-            style={{ padding: '8px', opacity: 0.7 }}
+            disabled={isSubmitting}
+            style={{ 
+              padding: '10px', 
+              color: 'var(--text-secondary)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            <Plus size={24} />
+            <Plus size={22} strokeWidth={1.75} />
           </button>
           
           <input
             ref={inputRef}
             type="text"
-            placeholder="Type your message..."
+            placeholder="Type what you noticed..."
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             disabled={isSubmitting}
             style={{
               flex: 1,
@@ -87,24 +104,46 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
               border: 'none',
               color: 'var(--text-primary)',
               fontSize: '1rem',
-              padding: '0.5rem',
+              padding: '0.5rem 0.25rem',
               outline: 'none',
               minWidth: 0
             }}
           />
           
-          {text.trim() || capturedPhoto ? (
+          {canSend ? (
             <button 
               type="submit" 
               disabled={isSubmitting}
-              style={{ padding: '8px', color: 'var(--accent)' }}
-              aria-label="Send"
+              aria-label="Send observation"
+              style={{ 
+                padding: '10px', 
+                color: '#ffffff',
+                backgroundColor: 'var(--accent)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 2px 10px rgba(59, 130, 246, 0.4)',
+                transform: isSubmitting ? 'scale(0.95)' : 'scale(1)'
+              }}
             >
-              <Send size={20} />
+              <Send size={18} strokeWidth={2} />
             </button>
           ) : (
-            <button type="button" style={{ padding: '8px', opacity: 0.7 }} aria-label="Voice record">
-              <Mic size={20} />
+            <button 
+              type="button" 
+              disabled={isSubmitting}
+              aria-label="Voice input"
+              style={{ 
+                padding: '10px', 
+                color: 'var(--text-secondary)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Mic size={20} strokeWidth={1.75} />
             </button>
           )}
         </div>
@@ -113,22 +152,25 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         <button 
           type="button"
           onClick={onCameraClick}
-          aria-label="Camera"
+          disabled={isSubmitting}
+          aria-label="Open Camera"
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '48px',
-            height: '48px',
-            borderRadius: '24px',
-            backgroundColor: 'rgba(30, 41, 59, 0.4)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+            width: '52px',
+            height: '52px',
+            borderRadius: '26px',
+            backgroundColor: 'var(--glass-bg)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid var(--glass-border)',
+            boxShadow: 'var(--glass-shadow)',
+            color: 'var(--text-primary)',
+            flexShrink: 0
           }}
         >
-          <Camera size={20} />
+          <Camera size={22} strokeWidth={1.75} />
         </button>
       </form>
 
@@ -144,3 +186,4 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     </div>
   );
 };
+
