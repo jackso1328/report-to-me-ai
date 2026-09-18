@@ -17,6 +17,8 @@ Globals:
         APP_NAME: !Ref AppName
         ENVIRONMENT: !Ref Environment
         LOG_LEVEL: INFO
+        BEDROCK_MODEL_ID: !Ref BedrockModelId
+        PROMPT_VERSION: "v1"
 
 Parameters:
   AppName:
@@ -27,6 +29,10 @@ Parameters:
     Type: String
     Default: "dev"
     Description: Environment (dev, staging, prod)
+  BedrockModelId:
+    Type: String
+    Default: "amazon.nova-lite-v1:0"
+    Description: Amazon Bedrock Model ID to use for AI Analysis
 
 Resources:
   # HTTP API
@@ -58,6 +64,25 @@ Resources:
                 - logs:CreateLogStream
                 - logs:PutLogEvents
               Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+
+  # Analyze Test Lambda Function (Manual Invocation for PoC)
+  AnalyzeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.analyze_poc.lambda_handler
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}"
 
 Outputs:
   HealthApiUrl:

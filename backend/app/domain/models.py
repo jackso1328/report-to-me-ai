@@ -61,3 +61,40 @@ class Review(BaseModel):
     reviewer_id: Optional[str] = None
     decision: Optional[ReviewDecision] = None
     comments: Optional[str] = None
+
+class AIClassification(BaseModel):
+    category: IncidentCategory
+    eventType: str
+    object: str
+
+class AIUnderstanding(BaseModel):
+    summary: str
+    observedFacts: List[str]
+
+class AIAssessment(BaseModel):
+    severity: Severity
+    confidence: float
+    riskFactors: List[str]
+
+class AIGuidance(BaseModel):
+    recommendedAction: str
+    mode: GuidanceMode
+
+class AIUncertainty(BaseModel):
+    missingInformation: List[str]
+    needsClarification: bool
+
+class AIMetadata(BaseModel):
+    modelId: str
+    promptVersion: str
+    schemaVersion: str
+    analyzedAt: str
+
+class AIAnalysis(BaseModel):
+    schemaVersion: str
+    classification: AIClassification
+    understanding: AIUnderstanding
+    assessment: AIAssessment
+    guidance: AIGuidance
+    uncertainty: AIUncertainty
+    metadata: AIMetadata
