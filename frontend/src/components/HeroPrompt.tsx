@@ -1,6 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export const HeroPrompt: React.FC = () => {
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    let idleTimer: number;
+    let animationTimer: number;
+
+    const resetIdleTimer = () => {
+      setIsAnimating(false);
+      clearTimeout(idleTimer);
+      clearTimeout(animationTimer);
+
+      // Random interval between 15 and 35 seconds
+      const delay = 15000 + Math.random() * 20000;
+      
+      idleTimer = window.setTimeout(() => {
+        setIsAnimating(true);
+        // Animation lasts ~6s, then reset
+        animationTimer = window.setTimeout(() => {
+          resetIdleTimer();
+        }, 6500);
+      }, delay);
+    };
+
+    resetIdleTimer();
+
+    const events = ['mousemove', 'keydown', 'touchstart'];
+    const handleActivity = () => resetIdleTimer();
+    
+    events.forEach(e => window.addEventListener(e, handleActivity));
+
+    return () => {
+      clearTimeout(idleTimer);
+      clearTimeout(animationTimer);
+      events.forEach(e => window.removeEventListener(e, handleActivity));
+    };
+  }, []);
+
   return (
     <div style={{
       display: 'flex',
@@ -33,8 +70,32 @@ export const HeroPrompt: React.FC = () => {
           display: 'inline-block'
         }}>
           happened
-          <span className="question-mark">?</span>
-          <span className="question-sparkle">✦</span>
+          <span 
+            className={`story-animating-container ${isAnimating ? 'story-animating' : ''}`}
+            style={{ position: 'relative', display: 'inline-block' }}
+          >
+            <span className={isAnimating ? 'text-transparent' : ''}>?</span>
+            
+            {isAnimating && (
+              <>
+                <span 
+                  className="anim-q-body" 
+                  aria-hidden="true" 
+                  style={{ position: 'absolute', top: 0, left: 0, clipPath: 'polygon(0 0, 100% 0, 100% 82%, 0 82%)' }}
+                >?</span>
+                <span 
+                  className="anim-q-dot" 
+                  aria-hidden="true" 
+                  style={{ position: 'absolute', top: 0, left: 0, clipPath: 'polygon(0 82%, 100% 82%, 100% 100%, 0 100%)' }}
+                >?</span>
+                <span 
+                  className="anim-q-sparkle" 
+                  aria-hidden="true"
+                  style={{ position: 'absolute', top: 0, left: 0, fontSize: '0.45em', color: 'var(--accent)' }}
+                >✦</span>
+              </>
+            )}
+          </span>
         </span>
       </h1>
       <p style={{
