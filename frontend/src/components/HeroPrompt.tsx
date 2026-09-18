@@ -12,8 +12,8 @@ export const HeroPrompt: React.FC = () => {
       clearTimeout(idleTimer);
       clearTimeout(animationTimer);
 
-      // Random interval between 15 and 35 seconds
-      const delay = 15000 + Math.random() * 20000;
+      // Exactly 30 seconds of continuous idle time
+      const delay = 30000;
       
       idleTimer = window.setTimeout(() => {
         setIsAnimating(true);
@@ -26,7 +26,7 @@ export const HeroPrompt: React.FC = () => {
 
     resetIdleTimer();
 
-    const events = ['mousemove', 'keydown', 'touchstart'];
+    const events = ['mousemove', 'keydown', 'touchstart', 'mousedown', 'click'];
     const handleActivity = () => resetIdleTimer();
     
     events.forEach(e => window.addEventListener(e, handleActivity));
