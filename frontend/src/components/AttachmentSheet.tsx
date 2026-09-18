@@ -1,12 +1,21 @@
-import React, { useEffect } from 'react';
-import { Image, File, Mic } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Image, File as FileIcon, Mic } from 'lucide-react';
+import type { AttachmentData } from '../types';
 
 interface AttachmentSheetProps {
   onClose: () => void;
-  onCameraClick: () => void;
+  onFileSelect: (attachment: AttachmentData) => void;
+  onVoiceSelect: () => void;
 }
 
-export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCameraClick }) => {
+export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ 
+  onClose, 
+  onFileSelect,
+  onVoiceSelect
+}) => {
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -16,6 +25,20 @@ export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCam
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'file') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    onFileSelect({
+      type,
+      url,
+      file,
+      name: file.name,
+      size: file.size
+    });
+  };
 
   return (
     <>
@@ -74,56 +97,80 @@ export const AttachmentSheet: React.FC<AttachmentSheetProps> = ({ onClose, onCam
         </h3>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-          <button onClick={onCameraClick} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '1.1rem 1.25rem',
-            borderRadius: '16px',
-            backgroundColor: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
-            width: '100%',
-            textAlign: 'left',
-            color: 'var(--text-primary)',
-            fontSize: '1rem',
-            minHeight: '52px'
-          }}>
+          
+          <input 
+            type="file" 
+            ref={imageInputRef}
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileChange(e, 'image')}
+          />
+          <button 
+            onClick={() => imageInputRef.current?.click()} 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '1.1rem 1.25rem',
+              borderRadius: '16px',
+              backgroundColor: 'var(--glass-bg)',
+              border: '1px solid var(--glass-border)',
+              width: '100%',
+              textAlign: 'left',
+              color: 'var(--text-primary)',
+              fontSize: '1rem',
+              minHeight: '52px'
+            }}
+          >
             <Image size={22} strokeWidth={1.75} style={{ color: 'var(--accent)' }} />
-            <span>Photo or Video</span>
+            <span>Photo / Image</span>
           </button>
           
-          <button style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '1.1rem 1.25rem',
-            borderRadius: '16px',
-            backgroundColor: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
-            width: '100%',
-            textAlign: 'left',
-            color: 'var(--text-primary)',
-            fontSize: '1rem',
-            minHeight: '52px'
-          }}>
-            <File size={22} strokeWidth={1.75} style={{ color: 'var(--text-secondary)' }} />
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            accept="image/*,application/pdf,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,audio/*,video/*"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileChange(e, 'file')}
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '1.1rem 1.25rem',
+              borderRadius: '16px',
+              backgroundColor: 'var(--glass-bg)',
+              border: '1px solid var(--glass-border)',
+              width: '100%',
+              textAlign: 'left',
+              color: 'var(--text-primary)',
+              fontSize: '1rem',
+              minHeight: '52px'
+            }}
+          >
+            <FileIcon size={22} strokeWidth={1.75} style={{ color: 'var(--text-secondary)' }} />
             <span>File</span>
           </button>
 
-          <button style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '1.1rem 1.25rem',
-            borderRadius: '16px',
-            backgroundColor: 'var(--glass-bg)',
-            border: '1px solid var(--glass-border)',
-            width: '100%',
-            textAlign: 'left',
-            color: 'var(--text-primary)',
-            fontSize: '1rem',
-            minHeight: '52px'
-          }}>
+          <button 
+            onClick={onVoiceSelect}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              padding: '1.1rem 1.25rem',
+              borderRadius: '16px',
+              backgroundColor: 'var(--glass-bg)',
+              border: '1px solid var(--glass-border)',
+              width: '100%',
+              textAlign: 'left',
+              color: 'var(--text-primary)',
+              fontSize: '1rem',
+              minHeight: '52px'
+            }}
+          >
             <Mic size={22} strokeWidth={1.75} style={{ color: 'var(--text-secondary)' }} />
             <span>Voice Recording</span>
           </button>

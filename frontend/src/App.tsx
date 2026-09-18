@@ -7,13 +7,14 @@ import { CameraCapture } from './components/CameraCapture';
 import { AnalysisResult } from './components/AnalysisResult';
 import { submitSignal } from './api/client';
 import type { IncidentResponse } from './api/client';
+import type { AttachmentData } from './types';
 import './index.css';
 
 type AppState = 'idle' | 'camera' | 'submitting' | 'result' | 'error';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('idle');
-  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   const [result, setResult] = useState<IncidentResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [processingPhase, setProcessingPhase] = useState<number>(1);
@@ -29,7 +30,7 @@ function App() {
     return () => clearTimeout(timer);
   }, [appState]);
 
-  const handleSend = async (text: string, photoDataUrl: string | null) => {
+  const handleSend = async (text: string) => {
     setAppState('submitting');
     setErrorMsg(null);
     
@@ -37,14 +38,14 @@ function App() {
       const payload = {
         source: {
           type: 'text',
-          content: text || (photoDataUrl ? 'An observation with attached evidence was provided.' : 'An observation was provided.')
+          content: text || (attachments.length > 0 ? 'An observation with attached evidence was provided.' : 'An observation was provided.')
         }
       };
 
       const res = await submitSignal(payload);
       setResult(res);
       setAppState('result');
-      setCapturedPhoto(null);
+      setAttachments([]);
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong. Please try again.');
       setAppState('error');
@@ -55,7 +56,15 @@ function App() {
     setAppState('idle');
     setResult(null);
     setErrorMsg(null);
-    setCapturedPhoto(null);
+    setAttachments([]);
+  };
+
+  const addAttachment = (attachment: AttachmentData) => {
+    setAttachments(prev => [...prev, attachment]);
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -140,8 +149,9 @@ function App() {
               onSend={handleSend}
               onCameraClick={() => setAppState('camera')}
               isSubmitting={false}
-              capturedPhoto={capturedPhoto}
-              onClearPhoto={() => setCapturedPhoto(null)}
+              attachments={attachments}
+              onAddAttachment={addAttachment}
+              onRemoveAttachment={removeAttachment}
             />
           </div>
         )}
@@ -183,7 +193,7 @@ function App() {
         <CameraCapture 
           onClose={() => setAppState('idle')}
           onCapture={(photoUrl) => {
-            setCapturedPhoto(photoUrl);
+            addAttachment({ type: 'image', url: photoUrl });
             setAppState('idle');
           }}
         />
@@ -193,4 +203,5 @@ function App() {
 }
 
 export default App;
+
 

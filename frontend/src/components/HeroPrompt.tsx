@@ -27,11 +27,14 @@ export const HeroPrompt: React.FC = () => {
           What
         </span>
         <span style={{
-          display: 'block',
           animation: 'titleSecond 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards',
-          opacity: 0
+          opacity: 0,
+          position: 'relative',
+          display: 'inline-block'
         }}>
-          happened?
+          happened
+          <span className="question-mark">?</span>
+          <span className="question-sparkle">✦</span>
         </span>
       </h1>
       <p style={{

@@ -1,35 +1,71 @@
-import React, { useState, useRef } from 'react';
-import { Plus, Mic, Camera, Send } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Plus, Mic, Camera, Send, Square } from 'lucide-react';
 import { AttachmentSheet } from './AttachmentSheet';
 import { AttachmentPreview } from './AttachmentPreview';
+import type { AttachmentData } from '../types';
+import { useVoiceRecorder } from '../hooks/useVoiceRecorder';
 
 interface MessageComposerProps {
-  onSend: (text: string, photoDataUrl: string | null) => void;
+  onSend: (text: string) => void;
   onCameraClick: () => void;
   isSubmitting: boolean;
-  capturedPhoto: string | null;
-  onClearPhoto: () => void;
+  attachments: AttachmentData[];
+  onAddAttachment: (attachment: AttachmentData) => void;
+  onRemoveAttachment: (index: number) => void;
 }
 
 export const MessageComposer: React.FC<MessageComposerProps> = ({ 
   onSend, 
   onCameraClick, 
   isSubmitting,
-  capturedPhoto,
-  onClearPhoto
+  attachments,
+  onAddAttachment,
+  onRemoveAttachment
 }) => {
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const canSend = (text.trim().length > 0 || capturedPhoto !== null) && !isSubmitting;
+  const {
+    isRecording,
+    recordingBlob,
+    error: voiceError,
+    waveformStream,
+    startRecording,
+    stopRecording,
+    clearRecording
+  } = useVoiceRecorder();
+
+  // If a voice recording finishes, add it as an attachment
+  useEffect(() => {
+    if (recordingBlob) {
+      const url = URL.createObjectURL(recordingBlob);
+      onAddAttachment({
+        type: 'audio',
+        url,
+        file: recordingBlob,
+        size: recordingBlob.size
+      });
+      clearRecording();
+    }
+  }, [recordingBlob, onAddAttachment, clearRecording]);
+
+  const canSend = (text.trim().length > 0 || attachments.length > 0) && !isSubmitting;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (canSend) {
-      onSend(text.trim(), capturedPhoto);
+      onSend(text.trim());
       setText('');
+    }
+  };
+
+  const handleMicClick = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
 
@@ -44,9 +80,26 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
       paddingBottom: 'max(1rem, env(safe-area-inset-bottom))'
     }}>
       
-      {capturedPhoto && (
-        <div style={{ marginBottom: '0.75rem' }}>
-          <AttachmentPreview photoDataUrl={capturedPhoto} onClear={onClearPhoto} />
+      {voiceError && (
+        <div style={{ marginBottom: '0.5rem', color: 'var(--danger)', fontSize: '0.85rem', textAlign: 'center' }}>
+          {voiceError}
+        </div>
+      )}
+
+      {attachments.length > 0 && (
+        <div style={{ 
+          marginBottom: '0.75rem', 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: '0.5rem' 
+        }}>
+          {attachments.map((attachment, idx) => (
+            <AttachmentPreview 
+              key={attachment.url + idx} 
+              attachment={attachment} 
+              onClear={() => onRemoveAttachment(idx)} 
+            />
+          ))}
         </div>
       )}
 
@@ -63,10 +116,10 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           backgroundColor: 'var(--glass-bg)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          border: `1px solid ${isFocused ? 'var(--border-focus)' : 'var(--glass-border)'}`,
+          border: `1px solid ${isFocused || isRecording ? 'var(--border-focus)' : 'var(--glass-border)'}`,
           borderRadius: '36px',
           padding: '0.4rem 0.5rem',
-          boxShadow: isFocused 
+          boxShadow: isFocused || isRecording
             ? '0 12px 36px rgba(0, 0, 0, 0.35), 0 0 20px rgba(59, 130, 246, 0.12)' 
             : 'var(--glass-shadow)',
           transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -76,41 +129,74 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label="Add attachment"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isRecording}
             style={{ 
               padding: '10px', 
               color: 'var(--text-secondary)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              opacity: isRecording ? 0.5 : 1
             }}
           >
             <Plus size={22} strokeWidth={1.75} />
           </button>
           
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Type what you noticed..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            disabled={isSubmitting}
-            style={{
+          {isRecording ? (
+            <div style={{
               flex: 1,
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-primary)',
-              fontSize: '1rem',
-              padding: '0.5rem 0.25rem',
-              outline: 'none',
-              minWidth: 0
-            }}
-          />
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 0.5rem',
+              gap: '2px',
+              height: '24px'
+            }}>
+              {waveformStream ? (
+                Array.from(waveformStream).map((val, i) => {
+                  const height = Math.max(2, Math.abs(val) * 40);
+                  return (
+                    <div 
+                      key={i} 
+                      style={{
+                        width: '3px',
+                        height: `${height}px`,
+                        backgroundColor: 'var(--danger)',
+                        borderRadius: '2px',
+                        transition: 'height 0.05s ease'
+                      }}
+                    />
+                  );
+                })
+              ) : (
+                <span style={{ color: 'var(--danger)', fontSize: '0.9rem' }}>Recording...</span>
+              )}
+            </div>
+          ) : (
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Type what you noticed..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              disabled={isSubmitting}
+              style={{
+                flex: 1,
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-primary)',
+                fontSize: '1rem',
+                padding: '0.5rem 0.25rem',
+                outline: 'none',
+                minWidth: 0
+              }}
+            />
+          )}
           
-          {canSend ? (
+          {canSend && !isRecording ? (
             <button 
               type="submit" 
               disabled={isSubmitting}
@@ -132,18 +218,20 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           ) : (
             <button 
               type="button" 
+              onClick={handleMicClick}
               disabled={isSubmitting}
-              aria-label="Voice input"
+              aria-label={isRecording ? "Stop recording" : "Voice input"}
               style={{ 
                 padding: '10px', 
-                color: 'var(--text-secondary)',
+                color: isRecording ? 'var(--danger)' : 'var(--text-secondary)',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                animation: isRecording ? 'pulseStar 1.5s ease-in-out infinite' : 'none'
               }}
             >
-              <Mic size={20} strokeWidth={1.75} />
+              {isRecording ? <Square size={18} fill="currentColor" /> : <Mic size={20} strokeWidth={1.75} />}
             </button>
           )}
         </div>
@@ -152,7 +240,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         <button 
           type="button"
           onClick={onCameraClick}
-          disabled={isSubmitting}
+          disabled={isSubmitting || isRecording}
           aria-label="Open Camera"
           style={{
             display: 'flex',
@@ -167,7 +255,8 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
             border: '1px solid var(--glass-border)',
             boxShadow: 'var(--glass-shadow)',
             color: 'var(--text-primary)',
-            flexShrink: 0
+            flexShrink: 0,
+            opacity: isRecording ? 0.5 : 1
           }}
         >
           <Camera size={22} strokeWidth={1.75} />
@@ -177,13 +266,18 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
       {sheetOpen && (
         <AttachmentSheet 
           onClose={() => setSheetOpen(false)} 
-          onCameraClick={() => {
+          onFileSelect={(attachment) => {
+            onAddAttachment(attachment);
             setSheetOpen(false);
-            onCameraClick();
+          }}
+          onVoiceSelect={() => {
+            setSheetOpen(false);
+            startRecording();
           }}
         />
       )}
     </div>
   );
 };
+
 

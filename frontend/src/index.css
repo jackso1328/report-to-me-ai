@@ -189,6 +189,35 @@ input, textarea {
   }
 }
 
+@keyframes questionIdle {
+  0%, 10% { transform: translateY(0) rotate(0); }
+  25%, 35% { transform: translateY(-3px) rotate(1.5deg); }
+  50%, 100% { transform: translateY(0) rotate(0); }
+}
+
+@keyframes sparklePop {
+  0%, 25% { opacity: 0; transform: scale(0.5); }
+  32% { opacity: 1; transform: scale(1.1); }
+  45%, 100% { opacity: 0; transform: scale(0.8); }
+}
+
+.question-mark {
+  display: inline-block;
+  animation: questionIdle 5s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.question-sparkle {
+  position: absolute;
+  top: 5px;
+  right: -15px;
+  font-size: 0.45em;
+  color: var(--accent);
+  opacity: 0;
+  animation: sparklePop 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
 .animate-fade-in {
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

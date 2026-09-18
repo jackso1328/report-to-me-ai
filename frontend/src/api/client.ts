@@ -1,5 +1,3 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 export interface SignalPayload {
   source: {
     type: string;
@@ -34,6 +32,9 @@ export interface IncidentResponse {
 }
 
 export const submitSignal = async (payload: SignalPayload): Promise<IncidentResponse> => {
+  // Use payload to avoid TS error
+  console.log('Sending payload:', payload);
+
   // Simulate network delay for the processing animation to show
   await new Promise(resolve => setTimeout(resolve, 2000));
 
