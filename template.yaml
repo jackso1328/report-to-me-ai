@@ -18,6 +18,8 @@ Globals:
         ENVIRONMENT: !Ref Environment
         LOG_LEVEL: INFO
         BEDROCK_MODEL_ID: !Ref BedrockModelId
+        AI_PROVIDER: !Ref AIProvider
+        DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
         PROMPT_VERSION: "v1"
 
 Parameters:
@@ -33,6 +35,14 @@ Parameters:
     Type: String
     Default: "amazon.nova-lite-v1:0"
     Description: Amazon Bedrock Model ID to use for AI Analysis
+  AIProvider:
+    Type: String
+    Default: "fake"
+    Description: Provider to use for AI Analysis (bedrock or fake)
+  DynamoDBTableName:
+    Type: String
+    Default: "ReportToMe"
+    Description: DynamoDB Table Name for Incidents
 
 Resources:
   # HTTP API
@@ -84,10 +94,106 @@ Resources:
                 - bedrock:InvokeModel
               Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}"
 
+  # Signal API Function (Ingestion + Core Pipeline)
+  SignalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.signals.lambda_handler
+      Timeout: 15 # Analysis could take up to 10s
+      Events:
+        PostSignal:
+          Type: HttpApi
+          Properties:
+            Path: /api/v1/signals
+            Method: post
+            ApiId: !Ref ReportToMeApi
+        GetSignal:
+          Type: HttpApi
+          Properties:
+            Path: /api/v1/signals/{signalId}
+            Method: get
+            ApiId: !Ref ReportToMeApi
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReportToMeTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}"
+
+  # Incident API Function
+  IncidentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.incidents.lambda_handler
+      Events:
+        GetIncident:
+          Type: HttpApi
+          Properties:
+            Path: /api/v1/incidents/{incidentId}
+            Method: get
+            ApiId: !Ref ReportToMeApi
+        ListIncidents:
+          Type: HttpApi
+          Properties:
+            Path: /api/v1/incidents
+            Method: get
+            ApiId: !Ref ReportToMeApi
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+        - DynamoDBReadPolicy:
+            TableName: !Ref ReportToMeTable
+
+  # DynamoDB Table
+  ReportToMeTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref DynamoDBTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: StatusTimeIndex
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
 Outputs:
   HealthApiUrl:
     Description: "API Gateway endpoint URL for Health check"
     Value: !Sub "https://${ReportToMeApi}.execute-api.${AWS::Region}.amazonaws.com/v1/api/v1/health"
-  HealthFunctionArn:
-    Description: "Health Lambda Function ARN"
-    Value: !GetAtt HealthFunction.Arn
+  ApiUrl:
+    Description: "API Gateway base URL"
+    Value: !Sub "https://${ReportToMeApi}.execute-api.${AWS::Region}.amazonaws.com/v1"

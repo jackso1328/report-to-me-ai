@@ -16,8 +16,9 @@ M1.2 Foundation and AWS SAM deployment established.
 - Amazon EventBridge (Event routing)
 
 ## Implemented
-- Project foundation (repository structure, configuration, shared models/enums, logging skeleton, tests)
-- AWS deployment foundation using SAM (Infrastructure as Code)
+- **M1.2 (SAM Foundation)**: AWS environment configured, SAM CLI configured, basic `/health` endpoint deployed and reachable.
+- **M1.3A (Bedrock Proof of Concept)**: `BedrockAdapter` implemented; live Bedrock invocation currently blocked by AWS account authorization.
+- **M1.3B (Complete End-to-End Pipeline)**: Signal ingestion, deterministic decision engine, and DynamoDB persistence implemented using single-table design. Deployment testing uses an explicitly configured `FakeAnalyzer` due to Bedrock limitations. No silent fallback is present.
 - API Gateway HTTP API and Health Lambda (/api/v1/health)
 
 ## Not Implemented Yet
