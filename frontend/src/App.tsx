@@ -43,6 +43,7 @@ function App() {
       };
 
       const res = await submitSignal(payload);
+      
       setResult(res);
       setAppState('result');
       setAttachments([]);

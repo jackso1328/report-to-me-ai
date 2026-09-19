@@ -55,8 +55,8 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (canSend) {
-      onSend(text.trim());
+    if (canSend && !isSubmitting) {
+      onSend(text);
       setText('');
     }
   };
