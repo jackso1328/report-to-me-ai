@@ -32,14 +32,52 @@ export interface IncidentResponse {
 }
 
 export const submitSignal = async (payload: SignalPayload): Promise<IncidentResponse> => {
-  // Use payload to avoid TS error
-  console.log('Sending payload:', payload);
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://5v3nc29f39.execute-api.us-east-1.amazonaws.com/v1/api/v1';
+  
+  const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
 
-  // Simulate network delay for the processing animation to show
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  try {
+    const response = await fetch(`${baseUrl}/signals`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey
+      },
+      body: JSON.stringify(payload)
+    });
 
-  // The user explicitly requested not to send the values since AWS Bedrock is not connected yet,
-  // and to display an error message instead.
-  throw new Error('Observation not sent: AWS Bedrock is not connected. Please connect your AWS account to process observations.');
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      throw new Error(
+        body?.error?.message ||
+        `Request failed (${response.status})`
+      );
+    }
+
+    const data = await response.json();
+
+    // Validate minimum required fields
+    if (
+      !data.id ||
+      !data.status ||
+      !data.analysis ||
+      !data.analysis.understanding ||
+      !data.analysis.assessment ||
+      !data.analysis.guidance ||
+      !data.decision ||
+      typeof data.decision.path !== 'string' ||
+      typeof data.decision.requiresHumanReview !== 'boolean'
+    ) {
+      throw new Error("Server returned an unexpected incident response.");
+    }
+
+    return data as IncidentResponse;
+  } catch (error: any) {
+    // If it's already an error from our validation or response.ok block, rethrow it
+    if (error.message) {
+      throw error;
+    }
+    throw new Error('A network error occurred while sending the observation.');
+  }
 };
 

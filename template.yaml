@@ -50,6 +50,16 @@ Resources:
     Type: AWS::Serverless::HttpApi
     Properties:
       StageName: v1
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowHeaders:
+          - "Content-Type"
+          - "Idempotency-Key"
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
 
   # Health Lambda Function
   HealthFunction:

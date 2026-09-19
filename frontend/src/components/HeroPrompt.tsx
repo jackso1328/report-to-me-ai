@@ -31,8 +31,8 @@ export const HeroPrompt: React.FC = () => {
     idleTimerRef.current = window.setTimeout(() => {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (prefersReducedMotion) {
-         resetIdle();
-         return;
+        resetIdle();
+        return;
       }
       isCancelledRef.current = false;
       setPhase('ESCAPE');
@@ -102,11 +102,11 @@ export const HeroPrompt: React.FC = () => {
 
       else if (phase === 'DOT_AT_DESTINATION') {
         const { x, y } = targetPosRef.current;
-        
+
         // Gentle float at destination
         dot.style.transition = 'transform 4s ease-in-out';
         dot.style.transform = `translate(${x + 3}px, ${y - 4}px) scale(0.8) rotate(10deg)`;
-        
+
         await wait(800);
         if (checkCancel()) return;
 
@@ -115,7 +115,7 @@ export const HeroPrompt: React.FC = () => {
         body.style.transform = 'rotate(-3deg) translateY(-2px)';
         await wait(1000);
         if (checkCancel()) return;
-        
+
         // Body tilt right
         body.style.transform = 'rotate(4deg) translateX(2px)';
         await wait(1000);
@@ -126,7 +126,7 @@ export const HeroPrompt: React.FC = () => {
 
       else if (phase === 'SEARCH') {
         const { x: targetX, y: targetY } = targetPosRef.current;
-        const dist = Math.sqrt(targetX*targetX + targetY*targetY);
+        const dist = Math.sqrt(targetX * targetX + targetY * targetY);
         const travelDur = Math.min(Math.max(dist / 200 * 1000, 1200), 2200);
 
         body.style.transition = 'none';
@@ -140,7 +140,7 @@ export const HeroPrompt: React.FC = () => {
           const my = (startY + endY) / 2;
           const dx = endX - startX;
           const dy = endY - startY;
-          
+
           const cx = mx - dy * 0.15;
           const cy = my + dx * 0.15;
 
@@ -149,13 +149,13 @@ export const HeroPrompt: React.FC = () => {
             let p = (time - startTime) / travelDur;
             if (p > 1) p = 1;
             const t = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-            
+
             const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX;
             const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY;
-            
+
             const rot = (x - startX) * 0.04;
             body.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
-            
+
             // Dot continues subtle float
             dot.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.8) rotate(10deg)`;
 
@@ -171,19 +171,19 @@ export const HeroPrompt: React.FC = () => {
 
       else if (phase === 'RECONNECT') {
         const { x: targetX, y: targetY } = targetPosRef.current;
-        
+
         await wait(100);
         if (checkCancel()) return;
 
         // Soft reconnect - independently move dot back to its relative home
         dot.style.transition = 'transform 250ms ease-out, filter 250ms ease';
-        dot.style.transform = `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`; 
+        dot.style.transform = `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`;
         dot.style.filter = 'brightness(1)';
-        
+
         // Tiny pulse on body
         body.style.transition = 'transform 300ms ease-in-out';
         body.style.transform = `translate(${targetX}px, ${targetY}px) scale(1.02) rotate(0deg)`;
-        
+
         await wait(250);
         if (checkCancel()) return;
 
@@ -191,13 +191,13 @@ export const HeroPrompt: React.FC = () => {
 
         await wait(250);
         if (checkCancel()) return;
-        
+
         setPhase('RETURN_HOME');
       }
 
       else if (phase === 'RETURN_HOME') {
         const { x: targetX, y: targetY } = targetPosRef.current;
-        const dist = Math.sqrt(targetX*targetX + targetY*targetY);
+        const dist = Math.sqrt(targetX * targetX + targetY * targetY);
         const returnDur = Math.min(Math.max(dist / 200 * 1000, 1000), 1500);
 
         body.style.transition = 'none';
@@ -211,7 +211,7 @@ export const HeroPrompt: React.FC = () => {
           const my = (startY + endY) / 2;
           const dx = endX - startX;
           const dy = endY - startY;
-          const cx = mx + dy * 0.1; 
+          const cx = mx + dy * 0.1;
           const cy = my - dx * 0.1;
 
           const step = (time: number) => {
@@ -219,10 +219,10 @@ export const HeroPrompt: React.FC = () => {
             let p = (time - startTime) / returnDur;
             if (p > 1) p = 1;
             const t = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
-            
+
             const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX;
             const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY;
-            
+
             body.style.transform = `translate(${x}px, ${y}px)`;
             dot.style.transform = `translate(${x}px, ${y}px)`;
 
@@ -238,10 +238,10 @@ export const HeroPrompt: React.FC = () => {
         body.style.transition = 'none';
         dot.style.transform = '';
         dot.style.transition = 'none';
-        
+
         await wait(200);
         if (checkCancel()) return;
-        
+
         resetIdle();
       }
     };
@@ -281,7 +281,7 @@ export const HeroPrompt: React.FC = () => {
         }}>
           What
         </span>
-        
+
         <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'flex-end' }}>
           <span style={{
             animation: 'titleSecond 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards',
@@ -291,14 +291,19 @@ export const HeroPrompt: React.FC = () => {
           </span>
 
           {/* Independent Question Body */}
-          <svg 
+          <svg
             ref={bodyRef}
             className={!isAnimating ? 'anim-body-idle' : ''}
-            viewBox="0 0 40 80" 
-            style={{ 
-              width: '0.4em', 
+            viewBox="0 0 40 80"
+            style={{
+              width: '0.4em',
               height: '0.8em',
               marginLeft: '0.08em',
+
+              // Move question mark body UP/DOWN
+              position: 'relative',
+              top: '-0.20em',
+
               overflow: 'visible',
               color: 'inherit',
               userSelect: 'none',
@@ -307,31 +312,36 @@ export const HeroPrompt: React.FC = () => {
             }}
             aria-hidden="true"
           >
-            <path 
-              d="M 5,25 C 5,5 35,5 35,25 C 35,45 20,50 20,70" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="6" 
-              strokeLinecap="round" 
+            <path
+              d="M 5,25 C 5,5 35,5 35,25 C 35,45 20,50 20,70"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="6"
+              strokeLinecap="round"
             />
           </svg>
 
           {/* Independent Question Dot */}
-          <svg 
+          <svg
             ref={dotRef}
             className={!isAnimating ? 'anim-dot-idle' : ''}
-            viewBox="0 0 20 20" 
-            style={{ 
+            viewBox="0 0 20 20"
+            style={{
               position: 'absolute',
-              right: '0.05em', // Visually center it under the body SVG
-              bottom: '0', 
-              width: '0.12em', 
+
+              /* ===== MANUAL QUESTION-DOT POSITION ===== */
+              left: 'calc(100% - 0.26em)',
+              bottom: '-0.10em',
+
+              width: '0.12em',
               height: '0.12em',
+
               overflow: 'visible',
               color: 'inherit',
+
               userSelect: 'none',
               WebkitUserSelect: 'none',
-              pointerEvents: 'none'
+              pointerEvents: 'none',
             }}
             aria-hidden="true"
           >
