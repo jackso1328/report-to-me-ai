@@ -4,7 +4,7 @@ type AnimPhase = 'IDLE' | 'ESCAPE' | 'DOT_AT_DESTINATION' | 'SEARCH' | 'RECONNEC
 
 const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> = ({ onIdleReset }) => {
   const [phase, setPhase] = useState<AnimPhase>('IDLE');
-  const containerRef = useRef<HTMLSpanElement>(null);
+  const bodyRef = useRef<HTMLSpanElement>(null);
   const dotRef = useRef<HTMLSpanElement>(null);
   const sparkleRef = useRef<HTMLSpanElement>(null);
   const targetPosRef = useRef({ x: 0, y: 0 });
@@ -18,10 +18,10 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
     if (idleTimerRef.current !== undefined) clearTimeout(idleTimerRef.current);
     if (animTimeoutRef.current !== undefined) clearTimeout(animTimeoutRef.current);
 
-    if (containerRef.current) {
-      containerRef.current.style.transform = '';
-      containerRef.current.style.transition = 'none';
-      containerRef.current.style.filter = '';
+    if (bodyRef.current) {
+      bodyRef.current.style.transform = '';
+      bodyRef.current.style.transition = 'none';
+      bodyRef.current.style.filter = '';
     }
     if (dotRef.current) {
       dotRef.current.style.transform = 'translate(-50%, 0)';
@@ -63,13 +63,13 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
     const checkCancel = () => isCancelledRef.current;
 
     const runPhase = async () => {
-      const container = containerRef.current;
+      const body = bodyRef.current;
       const dot = dotRef.current;
       const sparkle = sparkleRef.current;
-      if (!container || !dot || !sparkle) return;
+      if (!body || !dot || !sparkle) return;
 
       if (phase === 'ESCAPE') {
-        const rect = container.getBoundingClientRect();
+        const rect = body.getBoundingClientRect();
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const minDist = Math.min(vw, vh) * 0.25;
@@ -111,14 +111,14 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         await wait(800);
         if (checkCancel()) return;
 
-        // Container tilt left (anticipation)
-        container.style.transition = 'transform 0.8s ease-in-out';
-        container.style.transform = 'rotate(-3deg) translateY(-2px)';
+        // Body tilt left (anticipation)
+        body.style.transition = 'transform 0.8s ease-in-out';
+        body.style.transform = 'rotate(-3deg) translateY(-2px)';
         await wait(1000);
         if (checkCancel()) return;
         
-        // Container tilt right
-        container.style.transform = 'rotate(4deg) translateX(2px)';
+        // Body tilt right
+        body.style.transform = 'rotate(4deg) translateX(2px)';
         await wait(1000);
         if (checkCancel()) return;
 
@@ -130,7 +130,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         const dist = Math.sqrt(targetX*targetX + targetY*targetY);
         const travelDur = Math.min(Math.max(dist / 200 * 1000, 1200), 2200);
 
-        container.style.transition = 'none';
+        body.style.transition = 'none';
         dot.style.transition = 'none';
 
         await new Promise<void>((resolve) => {
@@ -155,10 +155,11 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
             const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY;
             
             const rot = (x - startX) * 0.04;
-            container.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+            body.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
             
-            const dotRelX = targetX - x;
-            const dotRelY = targetY - y;
+            // Dot continues subtle float
+            const dotRelX = targetX;
+            const dotRelY = targetY;
             dot.style.transform = `translate(calc(-50% + ${dotRelX}px), ${dotRelY}px) scale(0.8) rotate(10deg)`;
 
             if (p < 1) requestAnimationFrame(step);
@@ -179,17 +180,17 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
 
         // Soft reconnect
         dot.style.transition = 'transform 250ms ease-out, filter 250ms ease';
-        dot.style.transform = `translate(-50%, 0) scale(1) rotate(0deg)`; 
+        dot.style.transform = `translate(calc(-50% + ${targetX}px), ${targetY}px) scale(1) rotate(0deg)`; 
         dot.style.filter = 'brightness(1)';
         
         // Tiny pulse on body
-        container.style.transition = 'transform 300ms ease-in-out';
-        container.style.transform = `translate(${targetX}px, ${targetY}px) scale(1.02) rotate(0deg)`;
+        body.style.transition = 'transform 300ms ease-in-out';
+        body.style.transform = `translate(${targetX}px, ${targetY}px) scale(1.02) rotate(0deg)`;
         
         await wait(250);
         if (checkCancel()) return;
 
-        container.style.transform = `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`;
+        body.style.transform = `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`;
 
         await wait(250);
         if (checkCancel()) return;
@@ -202,7 +203,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         const dist = Math.sqrt(targetX*targetX + targetY*targetY);
         const returnDur = Math.min(Math.max(dist / 200 * 1000, 1000), 1500);
 
-        container.style.transition = 'none';
+        body.style.transition = 'none';
         dot.style.transition = 'none';
 
         await new Promise<void>((resolve) => {
@@ -225,7 +226,8 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
             const x = (1 - t) * (1 - t) * startX + 2 * (1 - t) * t * cx + t * t * endX;
             const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY;
             
-            container.style.transform = `translate(${x}px, ${y}px)`;
+            body.style.transform = `translate(${x}px, ${y}px)`;
+            dot.style.transform = `translate(calc(-50% + ${x}px), ${y}px)`;
 
             if (p < 1) requestAnimationFrame(step);
             else resolve();
@@ -235,8 +237,10 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
 
         if (checkCancel()) return;
 
-        container.style.transform = '';
-        container.style.transition = 'none';
+        body.style.transform = '';
+        body.style.transition = 'none';
+        dot.style.transform = 'translate(-50%, 0)';
+        dot.style.transition = 'none';
         
         await wait(200);
         if (checkCancel()) return;
@@ -247,13 +251,10 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
 
     runPhase();
   }, [phase, resetIdle]);
-
   const isAnimating = phase !== 'IDLE';
 
   return (
     <span 
-      ref={containerRef}
-      className={`animated-qm-wrapper ${!isAnimating ? 'idle-float' : ''}`}
       aria-hidden="true"
       style={{ 
         display: 'inline-block', 
@@ -266,35 +267,51 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         WebkitUserSelect: 'none',
       }}
     >
-      <svg viewBox="0 0 100 150" style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, overflow: 'visible' }}>
-        <path 
-          d="M 20,45 C 20,10 80,10 80,45 C 80,75 50,85 50,115" 
-          fill="none" 
-          stroke="currentColor" 
-          strokeWidth="16" 
-          strokeLinecap="round" 
-        />
-        <circle 
-          cx="50" cy="138" r="8" 
-          fill="currentColor" 
-          style={{ opacity: isAnimating ? 0 : 1, transition: 'opacity 0.1s' }} 
-        />
-      </svg>
-      <span 
+      {/* BODY */}
+      <span
+        ref={bodyRef}
+        className={!isAnimating ? 'anim-body-idle' : ''}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block'
+        }}
+      >
+        <svg viewBox="0 0 100 150" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+          <path 
+            d="M 20,45 C 20,10 80,10 80,45 C 80,75 50,85 50,115" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="16" 
+            strokeLinecap="round" 
+          />
+        </svg>
+      </span>
+
+      {/* DOT */}
+      <span
         ref={dotRef}
+        className={!isAnimating ? 'anim-dot-idle' : ''}
         style={{ 
           position: 'absolute', 
           left: '50%', 
           bottom: '2%', // approx cy 138 in the viewbox
           width: '0.18em', 
           height: '0.18em', 
-          backgroundColor: 'currentColor', 
-          borderRadius: '50%', 
           transform: 'translate(-50%, 0)',
-          opacity: isAnimating ? 1 : 0,
-          pointerEvents: 'none'
-        }} 
-      />
+          pointerEvents: 'none',
+          display: 'block'
+        }}
+      >
+        <svg viewBox="0 0 20 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+          <circle cx="10" cy="10" r="10" fill="currentColor" />
+        </svg>
+      </span>
+      
+      {/* SPARKLE */}
       <span 
         ref={sparkleRef}
         style={{ 
