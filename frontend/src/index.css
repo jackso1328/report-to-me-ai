@@ -189,20 +189,13 @@ input, textarea {
   }
 }
 
-@keyframes qBodySearchReact {
-  0% { transform: translate(0, 0) rotate(0); filter: brightness(1); }
-  20%, 30% { transform: translate(0, -4px) rotate(3deg); filter: brightness(1.2); }
-  45%, 55% { transform: translate(-6px, 0) rotate(-5deg); filter: brightness(1.2); }
-  70%, 80% { transform: translate(6px, -2px) rotate(8deg); filter: brightness(1.3); }
-  100% { transform: translate(0, 0) rotate(0); filter: brightness(1); }
+@keyframes qIdleFloat {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-4px) rotate(1.5deg); }
 }
 
-.anim-q-body-search {
-  animation: qBodySearchReact 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.text-transparent {
-  color: transparent !important;
+.idle-float {
+  animation: qIdleFloat 5s ease-in-out infinite;
 }
 
 .animate-fade-in {
