@@ -7,4 +7,4 @@ s3_prefix = "report-to-me-ai"
 region = "us-east-1"
 confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "Environment=\"dev\" AppName=\"Report-to-Me AI\""
+parameter_overrides = "Environment=\"dev\" AppName=\"Report-to-Me-AI\""

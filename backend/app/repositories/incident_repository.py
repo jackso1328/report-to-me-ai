@@ -409,3 +409,39 @@ class IncidentRepository:
             return related
         except ClientError as e:
             raise e
+
+    def save_response_packet(self, packet) -> None:
+        try:
+            timestamp = datetime.utcnow().isoformat() + "Z"
+            # SK = PACKET#<createdAt>#<packetId> to keep them immutable and ordered
+            sk = f"PACKET#{packet.generatedAt}#{packet.packetId}"
+            self.dynamodb.put_item(
+                TableName=self.table_name,
+                Item={
+                    "PK": {"S": f"INCIDENT#{packet.incidentId}"},
+                    "SK": {"S": sk},
+                    "data": {"S": packet.model_dump_json()},
+                    "createdAt": {"S": timestamp}
+                }
+            )
+        except ClientError as e:
+            raise e
+            
+    def get_latest_response_packet(self, incident_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            response = self.dynamodb.query(
+                TableName=self.table_name,
+                KeyConditionExpression="PK = :pk AND begins_with(SK, :sk_prefix)",
+                ExpressionAttributeValues={
+                    ":pk": {"S": f"INCIDENT#{incident_id}"},
+                    ":sk_prefix": {"S": "PACKET#"}
+                },
+                ScanIndexForward=False, # Descending by sort key (time)
+                Limit=1
+            )
+            items = response.get('Items', [])
+            if not items:
+                return None
+            return json.loads(items[0]['data']['S'])
+        except ClientError as e:
+            raise e

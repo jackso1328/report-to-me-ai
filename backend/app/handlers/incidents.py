@@ -40,6 +40,12 @@ def handle_get_incident(event: dict, context: Any) -> dict:
             return build_response(404, {"error": {"code": "NOT_FOUND", "message": "Incident not found"}})
             
         incident.pop("taskToken", None)
+        
+        # Append latest Response Packet if available
+        packet = repository.get_latest_response_packet(incident_id)
+        if packet:
+            incident["responsePacket"] = packet
+            
         return build_response(200, incident)
     except Exception as e:
         logger.error(f"Internal Error fetching incident: {str(e)}")

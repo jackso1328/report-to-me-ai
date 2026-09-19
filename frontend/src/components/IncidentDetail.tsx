@@ -157,6 +157,56 @@ export const IncidentDetail: React.FC<IncidentDetailProps> = ({ incidentId, onBa
             <AnalysisResult result={incident} />
           </div>
         )}
+
+        {incident.responsePacket && (
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '2rem', marginTop: '2rem' }}>
+            <h3 style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '1rem' }}>Historical Context</h3>
+            
+            {incident.responsePacket.historicalContextAvailable ? (
+              <div>
+                <p style={{ color: 'var(--text-primary)', marginBottom: '1rem', fontSize: '0.95rem' }}>
+                  Found {incident.responsePacket.relatedIncidents.length} related past incident(s).
+                </p>
+                {incident.responsePacket.relatedIncidents.map((related) => (
+                  <div key={related.incidentId} style={{
+                    backgroundColor: 'var(--glass-bg)',
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    border: '1px solid var(--glass-border)',
+                    marginBottom: '0.5rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>ID: {related.incidentId}</span>
+                      <span style={{ 
+                        fontSize: '0.8rem', 
+                        padding: '2px 8px', 
+                        borderRadius: '12px',
+                        backgroundColor: 'var(--surface)',
+                        border: '1px solid var(--glass-border)',
+                        color: 'var(--text-secondary)'
+                      }}>
+                        Score: {related.searchMetadata.score.toFixed(2)} ({related.searchMetadata.relationship})
+                      </span>
+                    </div>
+                    <p style={{ color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontSize: '0.95rem' }}>{related.summary}</p>
+                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                      <span>Status: {related.status}</span>
+                      {related.resolution && <span>Resolution: {related.resolution}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>No relevant historical incidents found.</p>
+            )}
+            
+            <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px dashed var(--glass-border)' }}>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Activity size={14} /> Provenance: {incident.responsePacket.provenance}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Review Actions */}

@@ -62,7 +62,10 @@ class TestStreamPublisher(unittest.TestCase):
         lambda_handler(event, None)
         
         entries = mock_events_client.put_events.call_args[1]['Entries']
-        self.assertEqual(len(entries), 1)
+        self.assertEqual(len(entries), 2)
+        types = [e['DetailType'] for e in entries]
+        self.assertIn("HumanReviewRequired", types)
+        self.assertIn("IncidentUpdated", types)
         self.assertEqual(entries[0]['DetailType'], 'HumanReviewRequired')
         
         detail = json.loads(entries[0]['Detail'])
@@ -110,4 +113,8 @@ class TestStreamPublisher(unittest.TestCase):
         
         mock_events_client.put_events.return_value = {"FailedEntryCount": 0}
         lambda_handler(event, None)
-        mock_events_client.put_events.assert_not_called()
+        
+        # It should publish IncidentUpdated but not HumanReviewRequired
+        entries = mock_events_client.put_events.call_args[1]['Entries']
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]['DetailType'], 'IncidentUpdated')

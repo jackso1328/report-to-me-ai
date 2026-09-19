@@ -21,9 +21,10 @@ Globals:
         AI_PROVIDER: !Ref AIProvider
         DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
         PROMPT_VERSION: "v1"
-        FORCE_DEPLOY: "2"
         EVENT_BUS_NAME: !Ref ReportToMeEventBus
-        SFN_STATE_MACHINE_ARN: !GetAtt HumanReviewWorkflow.Arn
+        # The CollectionEndpoint depends on OpenSearch collection creation. 
+        # Using a direct reference here might create circular deps or issues if done globally, 
+        # so we inject it specifically into AiWorkerFunction and IndexerFunction.
 
 Parameters:
   AppName:
@@ -87,6 +88,10 @@ Resources:
       CodeUri: backend/
       Handler: app.handlers.ai_worker.lambda_handler
       Timeout: 60
+      Environment:
+        Variables:
+          OPENSEARCH_ENDPOINT: !GetAtt IncidentMemoryCollection.CollectionEndpoint
+          OPENSEARCH_INDEX_NAME: "incident-memory-v1"
       Events:
         SQSQueueEvent:
           Type: SQS
@@ -103,6 +108,10 @@ Resources:
                 - logs:CreateLogStream
                 - logs:PutLogEvents
               Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+            - Effect: Allow
+              Action:
+                - aoss:APIAccessAll
+              Resource: !GetAtt IncidentMemoryCollection.Arn
         - DynamoDBCrudPolicy:
             TableName: !Ref ReportToMeTable
 
@@ -116,24 +125,14 @@ Resources:
         States:
           PrepareReviewAndWait:
             Type: Task
-            Resource: arn:aws:states:::dynamodb:updateItem.waitForTaskToken
+            Resource: arn:aws:states:::lambda:invoke.waitForTaskToken
             TimeoutSeconds: 86400
             Parameters:
-              TableName: !Ref DynamoDBTableName
-              Key:
-                PK:
-                  "S.$": "States.Format('INCIDENT#{}', $.detail.incidentId)"
-                SK:
-                  S: META
-              UpdateExpression: "SET taskToken = :token, reviewState = :pending, reviewExecutionId = :execId"
-              ConditionExpression: "attribute_not_exists(reviewState)"
-              ExpressionAttributeValues:
-                ":token":
-                  "S.$": "$$.Task.Token"
-                ":pending":
-                  S: pending
-                ":execId":
-                  "S.$": "$$.Execution.Id"
+              FunctionName: !Ref PrepareReviewFunction
+              Payload:
+                incidentId.$: "$.detail.incidentId"
+                taskToken.$: "$$.Task.Token"
+                executionId.$: "$$.Execution.Id"
             ResultPath: "$.reviewOutput"
             Catch:
               - ErrorEquals: ["DynamoDB.ConditionalCheckFailedException"]
@@ -271,12 +270,110 @@ Resources:
                 - dynamodb:UpdateItem
                 - dynamodb:PutItem
               Resource: !GetAtt ReportToMeTable.Arn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !GetAtt PrepareReviewFunction.Arn
 
   # EventBridge Event Bus
   ReportToMeEventBus:
     Type: AWS::Events::EventBus
     Properties:
       Name: !Sub "${AppName}-EventBus-${Environment}"
+
+  # OpenSearch Serverless for Incident Memory
+  IncidentMemoryCollection:
+    Type: AWS::OpenSearchServerless::Collection
+    DependsOn: 
+      - IncidentMemoryEncryptionPolicy
+      - IncidentMemoryNetworkPolicy
+    Properties:
+      Name: !Sub "incident-memory-${Environment}"
+      Type: SEARCH
+      Description: "Lexical BM25 search collection for incident memory"
+
+  IncidentMemoryEncryptionPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: !Sub "enc-policy-${Environment}"
+      Type: encryption
+      Policy: !Sub >
+        {"Rules":[{"ResourceType":"collection","Resource":["collection/incident-memory-${Environment}"]}],"AWSOwnedKey":true}
+
+  IncidentMemoryNetworkPolicy:
+    Type: AWS::OpenSearchServerless::SecurityPolicy
+    Properties:
+      Name: !Sub "net-policy-${Environment}"
+      Type: network
+      Policy: !Sub >
+        [{"Rules":[{"ResourceType":"collection","Resource":["collection/incident-memory-${Environment}"]}],"AllowFromPublic":true}]
+
+  IncidentMemoryDataAccessPolicy:
+    Type: AWS::OpenSearchServerless::AccessPolicy
+    Properties:
+      Name: !Sub "data-policy-${Environment}"
+      Type: data
+      Policy: !Sub >
+        [{"Rules":[{"ResourceType":"collection","Resource":["collection/incident-memory-${Environment}"],"Permission":["aoss:CreateCollectionItems","aoss:DeleteCollectionItems","aoss:UpdateCollectionItems","aoss:DescribeCollectionItems"]},{"ResourceType":"index","Resource":["index/incident-memory-v1/*","index/incident-memory-v1"],"Permission":["aoss:CreateIndex","aoss:DeleteIndex","aoss:UpdateIndex","aoss:DescribeIndex","aoss:ReadDocument","aoss:WriteDocument"]}],"Principal":["${IndexerFunctionRole.Arn}","${AiWorkerFunctionRole.Arn}"]}]
+
+  # EventBridge Rule routing to Memory Indexer
+  MemoryIndexerRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref ReportToMeEventBus
+      Name: !Sub "${AppName}-MemoryIndexerRule-${Environment}"
+      State: ENABLED
+      EventPattern:
+        source:
+          - "report-to-me"
+        detail-type:
+          - "IncidentUpdated"
+      Targets:
+        - Arn: !GetAtt IndexerFunction.Arn
+          Id: "IndexerTarget"
+
+  IndexerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.indexer.lambda_handler
+      Environment:
+        Variables:
+          OPENSEARCH_ENDPOINT: !GetAtt IncidentMemoryCollection.CollectionEndpoint
+          OPENSEARCH_INDEX_NAME: "incident-memory-v1"
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+            - Effect: Allow
+              Action:
+                - aoss:APIAccessAll
+              Resource: !GetAtt IncidentMemoryCollection.Arn
+
+  IndexerFunctionInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IndexerFunction
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt MemoryIndexerRule.Arn
+
+  PrepareReviewFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.prepare_review.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReportToMeTable
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref ReportToMeTable
 
   # EventBridge Rule routing to AiProcessingQueue
   AiProcessingRule:
@@ -393,6 +490,8 @@ Resources:
               Action:
                 - events:PutEvents
               Resource: !GetAtt ReportToMeEventBus.Arn
+        - SQSSendMessagePolicy:
+              QueueName: !GetAtt AiProcessingDlq.QueueName
 
   # Evidence S3 Bucket
   EvidenceBucket:

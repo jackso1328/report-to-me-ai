@@ -7,15 +7,17 @@ from app.domain.enums import IncidentStatus, ProcessingState
 from app.ai.analyzer_factory import get_analyzer
 from app.services.decision_engine import DecisionEngine
 from app.services.safety_gate import SafetyGate
+from app.services.memory_service import MemoryService
 from app.repositories.incident_repository import IncidentRepository
 
 logger = logging.getLogger(__name__)
 
 class AIWorkerService:
-    def __init__(self, repository: IncidentRepository = None):
+    def __init__(self, repository: IncidentRepository = None, memory_service: MemoryService = None):
         self.analyzer = get_analyzer()
         self.decision_engine = DecisionEngine()
         self.safety_gate = SafetyGate()
+        self.memory_service = memory_service or MemoryService()
         self.repository = repository or IncidentRepository()
 
     def process_incident_analysis(self, incident_id: str, signal_id: str) -> bool:
@@ -66,34 +68,60 @@ class AIWorkerService:
             # 4.5 Deterministic Safety Normalization
             ai_analysis = self.safety_gate.normalize(ai_analysis)
             
-            # 5. Deterministic Correlation (Emerging Intelligence)
+            # 5. Retrieve Historical Context (OpenSearch)
+            import uuid
+            from datetime import datetime
+            from app.domain.models import ResponsePacket, Decision
+            
+            location_desc = signal.location.description if signal.location else ""
+            category_val = ai_analysis.classification.category.value
+            event_type = ai_analysis.classification.eventType
+            obj = ai_analysis.classification.object
+            
+            historical_candidates = self.memory_service.find_related_incidents(
+                category=category_val,
+                event_type=event_type,
+                obj=obj,
+                location_description=location_desc,
+                limit=5
+            )
+            
+            historical_incidents_without_self = [h for h in historical_candidates if h.incidentId != incident_id]
+
+            # 6. Deterministic Correlation (Emerging Intelligence)
             recurrence_count = incident.get("recurrenceCount", 1)
             first_observed_at = incident.get("firstObservedAt")
             related_signal_ids = incident.get("relatedSignalIds", [])
             
-            if signal.location and signal.location.description:
-                related = self.repository.find_related_incidents(
-                    category=ai_analysis.classification.category.value,
-                    location_description=signal.location.description
+            if location_desc:
+                # We merge DynamoDB bounded search and OpenSearch historical context
+                related_ddb = self.repository.find_related_incidents(
+                    category=category_val,
+                    location_description=location_desc
                 )
                 
-                related = [r for r in related if r['id'] != incident_id]
+                related_ddb = [r for r in related_ddb if r['id'] != incident_id]
                 
-                if related:
-                    recurrence_count = len(related) + 1
-                    first_observed_at = min([r.get('firstObservedAt', r.get('createdAt')) for r in related])
+                if related_ddb:
+                    recurrence_count = len(related_ddb) + 1
+                    first_observed_at = min([r.get('firstObservedAt', r.get('createdAt')) for r in related_ddb])
                     
-                    for r in related:
+                    for r in related_ddb:
                         for sig in r.get('signals', []):
                             if sig['id'] not in related_signal_ids:
                                 related_signal_ids.append(sig['id'])
                                 if len(related_signal_ids) >= 5: break
                         if len(related_signal_ids) >= 5: break
+            
+            if historical_incidents_without_self and len(historical_incidents_without_self) > len(related_ddb):
+                # Historical context might be larger than recent DynamoDB scan. 
+                # This ensures memory isn't bounded just by recent active incidents.
+                recurrence_count = max(recurrence_count, len(historical_incidents_without_self) + 1)
 
-            # 6. Run deterministic Decision Engine
+            # 7. Run deterministic Decision Engine
             decision = self.decision_engine.evaluate(ai_analysis, incident_id)
 
-            # 7. Determine Incident Status
+            # 8. Determine Incident Status
             if recurrence_count >= 3 and decision.path.value != "human_review":
                 status = IncidentStatus.emerging
             elif decision.requires_human_review:
@@ -104,6 +132,21 @@ class AIWorkerService:
                 status = IncidentStatus.monitoring
             else:
                 status = IncidentStatus.analyzed
+
+            # 9. Build and Persist Response Packet
+            packet = ResponsePacket(
+                packetId=str(uuid.uuid4()),
+                incidentId=incident_id,
+                generatedAt=datetime.utcnow().isoformat() + "Z",
+                incidentSummary=ai_analysis.understanding.summary,
+                assessment=ai_analysis.assessment,
+                historicalContextAvailable=len(historical_incidents_without_self) > 0,
+                relatedIncidents=historical_incidents_without_self,
+                decision=decision,
+                recommendation=ai_analysis.guidance.recommendedAction,
+                provenance="System generated using AI classification and MemoryService search"
+            )
+            self.repository.save_response_packet(packet)
 
             # 8. Persist final state
             self.repository.save_incident_aggregate(

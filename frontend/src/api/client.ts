@@ -36,6 +36,22 @@ export interface IncidentResponse {
     reasoning: string;
     requiresHumanReview: boolean;
   };
+  responsePacket?: {
+    historicalContextAvailable: boolean;
+    relatedIncidents: Array<{
+      incidentId: string;
+      summary: string;
+      status: string;
+      createdAt: string;
+      resolution?: string;
+      searchMetadata: {
+        score: number;
+        relationship: string;
+      }
+    }>;
+    recommendation: string;
+    provenance: string;
+  };
 }
 
 export const getIncidents = async (): Promise<IncidentResponse[]> => {

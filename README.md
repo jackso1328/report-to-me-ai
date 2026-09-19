@@ -8,16 +8,19 @@ Traditional reporting systems are designed merely to collect forms and build bac
 ![Python 3.10](https://img.shields.io/badge/Python-3.10-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-React-blue)
 
-## What makes Report-to-Me different?
+## Why Report-to-Me AI?
 
 Traditional reporting systems primarily collect observations. Generic AI assistants can explain an individual situation, but the model itself should not be trusted to directly control sensitive application workflows. 
 
-Report-to-Me combines:
-**Observation** → **AI interpretation** → **Structured assessment** → **Deterministic decision policy** → **Actionable guidance** → **Monitoring / human review**
+Tell Report-to-Me AI what is happening. It helps you understand what you can safely do, what you should monitor, and when appropriate human help is needed.
 
-The model interprets the context. Deterministic software strictly controls the workflow. Humans remain responsible for sensitive actions.
+The product follows:
+**Understand → Assess → Guide → Monitor → Escalate when appropriate**
 
-## Example Scenarios
+The core architectural principle is:
+**AI interprets. Software decides. Humans authorize sensitive actions.**
+
+## Core Workflow
 
 ### Self-solve
 > **"The tap in Classroom 204 is leaking slightly."**
@@ -25,12 +28,12 @@ The model interprets the context. Deterministic software strictly controls the w
 A low-risk, highly actionable observation. The AI assesses this as low severity, and the decision engine routes it to self-solve. The user receives practical guidance on how to secure the area or report it to maintenance, without escalating to an emergency workflow.
 
 ### Monitor
-> **"The fan in Classroom 204 is making a strange grinding noise."**
+> **"An unfamiliar vehicle has been parked near the rear loading dock for two hours."**
 
-An issue that doesn't pose an immediate risk but may develop into one. The AI flags uncertainty or moderate risk factors. The decision engine routes it to monitor rather than immediately escalating. 
+An issue that doesn't pose an immediate risk but may develop into one. The AI flags uncertainty or moderate risk factors. The decision engine routes it to monitor rather than immediately escalating. The system may recall past observations of similar vehicles using its OpenSearch memory.
 
 ### Human review
-> **"There is a fight near the main gate."**
+> **"A loud noise followed by a power outage in the east wing."**
 
 A higher-risk, sensitive situation. The AI detects critical risk factors and high severity. The deterministic decision engine forces this into a human review queue. The system provides the user with safe guidance but does **not** autonomously contact emergency services or execute sensitive real-world actions.
 
@@ -50,57 +53,53 @@ flowchart TD
         subgraph Lambdas
             SignalFn[Signal API]
             PresignFn[Presign API]
+            AIWorker[AI Worker via SQS]
+            Indexer[Memory Indexer]
         end
         
         S3[(Private S3)]
         DB[(DynamoDB)]
+        Search[(OpenSearch Serverless)]
+        EventBus[EventBridge]
         
         subgraph Core Logic
-            AI[AI Analysis Provider]
+            AI[OpenRouter Provider]
             Engine[Decision Engine]
+            Memory[Memory Service]
         end
     end
-    
-    User -- Requests upload URL --> React
-    React -- POST /evidence/presign --> API
-    API --> PresignFn
-    PresignFn -. Returns Signed URL .-> React
-    
-    React -- PUT Object --> S3
     
     User -- Submits Observation --> React
     React -- POST /signals --> API
     API --> SignalFn
+    SignalFn -- Enqueues Task --> SQS[SQS Queue]
+    SQS --> AIWorker
     
-    SignalFn --> AI
-    AI -. Structured Assessment .-> SignalFn
-    SignalFn --> Engine
+    AIWorker --> AI
+    AI -. Structured Assessment .-> AIWorker
+    AIWorker <--> Memory
+    Memory <--> Search
+    AIWorker --> Engine
     
     Engine -- Routes workflow --> DB
-    SignalFn -- Persists Incident --> DB
+    AIWorker -- Updates Incident --> DB
+    
+    DB -- DynamoDB Streams --> StreamPub[Stream Publisher]
+    StreamPub --> EventBus
+    EventBus -- Routes to Indexer --> Indexer
+    Indexer -- Syncs to --> Search
 ```
 
-The AI Analysis Layer uses a provider abstraction. The current deployment configuration can use a deterministic development analyzer for rapid iteration, while managed model inference (e.g., Amazon Bedrock) is configured and enabled separately. 
+### AI Pipeline & Provider
 
-### AWS Architecture Decisions
+The AI Analysis Layer uses a provider abstraction. The current runtime configuration uses **OpenRouter** as the primary inference path to interpret unstructured text and provide structured JSON schema output. The AI strictly interprets the situation—it does not make the final decision.
 
-| Requirement | AWS Service | Why |
-|-------------|-------------|-----|
-| **HTTP API** | API Gateway | Managed serverless HTTP entry point supporting CORS and routing. |
-| **Application logic** | Lambda | Event-driven execution without always-on servers. |
-| **Incident state** | DynamoDB | Serverless low-latency structured persistence via single-table design. |
-| **Evidence** | S3 | Durable object storage enabling direct, secure browser uploads. |
-| **AI analysis** | AI Provider Abstraction | Separates model inference from strict application workflow code. |
-| **Infrastructure** | AWS SAM | Reproducible infrastructure as code for serverless resources. |
-
-The architecture is explicitly designed to be **elastic and cost-conscious**. Large media payloads are uploaded directly from the browser to an S3 private bucket via server-generated presigned URLs. Media bytes never pass through the Lambda execution boundary, ensuring the compute tier remains lean and extremely fast. Workflow states and metadata are heavily structured and persisted efficiently in a DynamoDB single-table design.
-
-## Decision Engine
+### Decision Engine
 
 The AI model does not directly control the final workflow state. It acts strictly as an analytical input layer:
 
 ```text
-AI Provider
+AI Provider (OpenRouter)
  ├── understands context
  ├── classifies category
  ├── assesses severity
@@ -113,105 +112,92 @@ Deterministic Decision Engine
  └── human_review
 ```
 
-### Severity ≠ Confidence
+### Safety Model
 
-The system enforces a strict distinction between severity and confidence:
-- **Severity** describes the potential danger or impact of a situation.
-- **Confidence** describes how certain the AI is about its own assessment.
+- **AI output is structured and validated** against strict schemas before processing.
+- **Deterministic application logic controls routing.** 
+- **AI does not autonomously dispatch police, emergency services, contractors, or other external actors.**
+- **Human authorization is required before sensitive external action.** High-risk situations are forced into a human review queue.
+- **Severity ≠ Confidence.** The system enforces a strict distinction. A high-severity situation assessed with low confidence requires fundamentally different routing than a high-severity situation assessed with high confidence.
 
-A high-severity situation assessed with low confidence requires fundamentally different routing than a high-severity situation assessed with high confidence.
+## AWS Architecture
 
-## Data Model
+The repository defines an AWS serverless architecture using:
 
-The backend utilizes DynamoDB Single-Table Design to represent the domain:
+| AWS Service | Purpose |
+|-------------|---------|
+| **API Gateway** | Managed serverless HTTP entry point supporting CORS and routing. |
+| **AWS Lambda** | Event-driven execution without always-on servers. |
+| **DynamoDB** | Serverless low-latency structured persistence acting as the absolute source of truth. |
+| **S3** | Durable object storage enabling direct, secure browser uploads (evidence). |
+| **SQS** | Asynchronous decoupling for AI inference with Dead-Letter Queues for failed processing. |
+| **DynamoDB Streams & EventBridge** | Event-driven architecture for reacting to incident state changes. |
+| **Step Functions** | Orchestrates secure human review and immutable auditing workflows. |
+| **OpenSearch Serverless** | A derived search/memory projection (Lexical/BM25) for querying historical incidents. |
+| **AWS SAM** | Reproducible infrastructure as code for serverless resources. |
 
-- **Signal**: The raw observation (text and location) from the user.
-- **Incident**: The interpreted, aggregated situation resulting from the signal.
-- **Evidence**: Attached media metadata securely pointing to S3 objects.
-- **Decision**: The specific workflow path chosen by the deterministic policy.
+## Data Model & Response Packet
 
-**Key Schema Overview:**
+The backend utilizes DynamoDB Single-Table Design as the authoritative source of truth. OpenSearch Serverless acts solely as a derived projection for historical search. 
+
+When a new observation arrives, the AI pipeline queries OpenSearch via BM25 lexical search to retrieve a `Response Packet`—a structured memory of related past incidents. This provides the AI with institutional memory, allowing it to provide contextual guidance based on historical data.
+
+**Key Schema Overview (DynamoDB):**
 - `PK: INCIDENT#<incidentId>`, `SK: META` (Incident State)
 - `PK: INCIDENT#<incidentId>`, `SK: SIGNAL#<signalId>` (Raw Signal Payload)
-- `PK: INCIDENT#<incidentId>`, `SK: DECISION` (Engine Decision)
-- `PK: INCIDENT#<incidentId>`, `SK: EVIDENCE#<evidenceId>` (S3 Evidence Pointer)
+- `PK: INCIDENT#<incidentId>`, `SK: PACKET#<packetId>` (Immutable Response Packet)
 - `PK: SIGNAL#<signalId>`, `SK: META` (Pointer for direct signal lookups)
 
-## Evidence Flow
+## Evidence Handling
 
-```text
-Browser
-   │ (1) request upload authorization
-   ▼
-API Gateway
-   │
-   ▼
-Presign Lambda
-   │ (2) generate restricted upload access
-   ▼
-Presigned S3 URL
-   │ (3) direct PUT object
-   ▼
-Private S3 bucket
-   │ (4) evidence metadata appended to signal
-   ▼
-Signal API → DynamoDB
-```
+Large media payloads are uploaded directly from the browser to an S3 private bucket via server-generated presigned URLs. Media bytes never pass through the Lambda execution boundary, ensuring the compute tier remains lean and extremely fast.
 
-Sending media directly to S3 demonstrates an intentional serverless pattern. Large media streams are not sent through API Gateway or Lambda, saving significant compute costs and avoiding API Gateway payload limits.
+## Security Principles
 
-## Security & Responsible AI
-
-The system is designed to reduce risk by strictly enforcing boundaries around AI behavior and data access:
-
-- **No Autonomous Emergency Dispatch**: High-risk situations require human review. The AI cannot trigger alarms or dispatch responders.
-- **Deterministic Routing**: Workflow decisions are strictly controlled by auditable software code, not generative AI.
-- **Structured AI Output**: Model responses are strictly validated against JSON schemas before being passed to the Decision Engine.
 - **Private S3 Storage**: All evidence is stored in buckets that explicitly block public access.
 - **Presigned Uploads**: The backend strictly controls exactly where and how files are uploaded via short-lived AWS presigned URLs.
 - **Server-Generated Object Keys**: S3 keys are securely generated by the server. The browser cannot dictate arbitrary S3 paths.
 - **IAM Scoping**: Each Lambda function operates with strictly scoped least-privilege permissions.
+- **Secrets Management**: No API keys or sensitive credentials are hardcoded or tracked in git.
 
-## Project Structure
+## Current Implementation
 
-```text
-.
-├── backend/
-│   ├── app/
-│   │   ├── ai/            # AI Provider abstraction
-│   │   ├── api/
-│   │   ├── config/
-│   │   ├── domain/        # Enums and core Pydantic classes
-│   │   ├── handlers/      # Lambda HTTP entrypoints
-│   │   ├── repositories/  # DynamoDB persistence layer
-│   │   ├── services/      # Signal Processor & Decision Engine
-│   │   └── utils/
-│   ├── tests/
-│   └── requirements.txt
-├── frontend/
-│   ├── src/               # React / TypeScript Application
-│   └── package.json
-├── template.yaml          # AWS SAM Infrastructure
-└── README.md
-```
+The repository currently implements the following:
+- Unstructured text and image evidence ingestion via React frontend.
+- Blob-to-S3 direct presigned uploads.
+- DynamoDB single-table incident persistence.
+- SQS-decoupled AI Worker processing with OpenRouter integration.
+- Deterministic routing decision engine (Self-solve / Monitor / Human-review).
+- EventBridge and Step Functions routing for Human Review.
+- DynamoDB Streams to EventBridge to OpenSearch Serverless indexing pipeline.
 
-## Getting Started
+## Known Limitations
+
+- **Infrastructure Deployment**: The repository defines an extensive AWS architecture in `template.yaml`. While the infrastructure code is fully implemented, full deployment requires a properly provisioned AWS account with active limits for services like OpenSearch Serverless.
+- **AI Dependencies**: AI output quality and latency depend strictly on the configured external provider (OpenRouter) and model availability.
+- **Search capabilities**: OpenSearch is currently implemented using BM25 lexical search. Semantic/vector search is not yet implemented. Furthermore, OpenSearch is an eventually consistent projection derived from DynamoDB Streams.
+- **External Interfaces**: The system is an internal decision support tool. It does not autonomously contact emergency services or external vendors.
+
+## Local Development
 
 ### Prerequisites
 - Node.js 18+
 - Python 3.10
-- AWS CLI (configured)
-- AWS SAM CLI (and optionally Docker)
+- AWS CLI
+- AWS SAM CLI (and Docker)
 
-### Local Development and Deployment
+### Backend Deployment
 
-Deploy the serverless infrastructure using AWS SAM:
+The architecture uses AWS SAM.
 
 ```bash
 sam build --use-container
 sam deploy --guided
 ```
 *(The `--use-container` flag ensures Python dependencies are compiled natively for the AWS Lambda Linux runtime.)*
+
+Set your AI provider credentials in the deployed Lambda environments:
+`OPENROUTER_API_KEY=your_key`
 
 After deployment, SAM will output the API Gateway `ApiUrl`. Use this to configure the frontend.
 
@@ -233,40 +219,12 @@ Start the Vite dev server:
 ```bash
 npm install
 npm run dev
-```
-
-## API Overview
-
-| Method | Route | Purpose |
-|--------|-------|---------|
-| `GET`  | `/api/v1/health` | Verify API availability and active configuration. |
-| `POST` | `/api/v1/signals` | Submit observation and execute core ingestion pipeline. |
-| `POST` | `/api/v1/evidence/presign` | Obtain a short-lived S3 upload authorization URL. |
-| `GET`  | `/api/v1/incidents` | Retrieve a list of recent incidents. |
-| `GET`  | `/api/v1/incidents/{id}` | Retrieve full details and nested signals for a specific incident. |
-| `GET`  | `/api/v1/signals/{id}` | Retrieve the original raw signal payload. |
-
-**Signal Submission Example:**
-```json
-{
-  "source": {
-    "type": "text", 
-    "content": "The tap is leaking."
-  }, 
-  "evidence": [
-    {
-      "evidenceId": "server-id", 
-      "objectKey": "key", 
-      "contentType": "image/jpeg", 
-      "size": 1024
-    }
-  ]
-}
+npm run build
 ```
 
 ## Testing
 
-Backend unit tests run via pytest:
+Backend tests are run via pytest:
 ```bash
 cd backend
 python -m venv .venv
@@ -275,32 +233,29 @@ pip install -r requirements.txt
 pytest
 ```
 
-Frontend builds strongly-typed TypeScript validation:
-```bash
-cd frontend
-npm run build
+Frontend UI code builds with strongly-typed TypeScript validation via `npm run build`.
+
+## Project Structure
+
+```text
+.
+├── backend/
+│   ├── app/
+│   │   ├── ai/            # OpenRouter provider abstraction
+│   │   ├── api/
+│   │   ├── domain/        # Core Pydantic classes and domain models
+│   │   ├── handlers/      # Lambda entrypoints (API, Indexer, Step Functions)
+│   │   ├── repositories/  # DynamoDB persistence layer
+│   │   ├── services/      # AI Worker, Decision Engine, Memory Service
+│   │   └── utils/
+│   ├── tests/
+│   └── requirements.txt
+├── frontend/
+│   ├── src/               # React / TypeScript Application
+│   └── package.json
+├── template.yaml          # AWS SAM Infrastructure
+└── README.md
 ```
-
-## Current Capabilities
-
-### Available now
-- Unstructured text and image evidence ingestion
-- Blob-to-S3 direct presigned uploads
-- Structured incident analysis abstraction layer
-- Deterministic routing decision engine
-- Self-solve / Monitor / Human-review workflows
-- DynamoDB single-table incident persistence
-- Fully serverless elastic AWS deployment
-
-### In development / planned
-- Transcribed voice evidence integration
-- Longitudinal and emerging incident intelligence (graph analysis)
-- Real-time human review dashboards
-
-## Known Limitations
-
-- **AI Provider Configuration**: The AI layer is provider-abstracted. The current repository configuration uses a deterministic development analyzer by default to facilitate rapid testing. Managed model inference (Amazon Bedrock) is fully implemented but requires environment activation.
-- **Windows Deployment**: AWS Lambda uses a Linux runtime. Running `sam build` natively on Windows fetches `.pyd` native binaries for packages like `pydantic-core` which fail on Lambda. Developers on Windows must use `sam build --use-container` or a compatible WSL environment to correctly package Linux `.so` wheels.
 
 ## Design Principles
 

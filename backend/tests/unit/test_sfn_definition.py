@@ -23,11 +23,10 @@ class TestStepFunctionsDefinition(unittest.TestCase):
     def test_idempotency_guard(self):
         prepare_state = self.sfn['States']['PrepareReviewAndWait']
         self.assertEqual(prepare_state['Type'], 'Task')
-        self.assertIn('ConditionExpression', prepare_state['Parameters'])
-        self.assertEqual(prepare_state['Parameters']['ConditionExpression'], 'attribute_not_exists(reviewState)')
+        self.assertIn('FunctionName', prepare_state['Parameters'])
         
-        # Verify it sets reviewState = pending
-        self.assertIn('reviewState = :pending', prepare_state['Parameters']['UpdateExpression'])
+        # Verify it passes the execution ID to the Lambda for idempotency
+        self.assertIn('executionId.$', prepare_state['Parameters']['Payload'])
 
     def test_duplicate_workflow_handled(self):
         prepare_state = self.sfn['States']['PrepareReviewAndWait']

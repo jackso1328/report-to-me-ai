@@ -8,10 +8,12 @@ class TestIncidentsHandler(unittest.TestCase):
     @patch('app.handlers.incidents.repository')
     def test_get_incident_strips_task_token(self, mock_repo):
         mock_repo.get_incident.return_value = {
+            "PK": "INCIDENT#inc-1",
             "id": "inc-1",
-            "status": "human_review",
-            "taskToken": "super-secret-token"
+            "taskToken": "super-secret-token",
+            "status": "human_review"
         }
+        mock_repo.get_latest_response_packet.return_value = None
         
         event = {
             "requestContext": {"http": {"method": "GET"}},

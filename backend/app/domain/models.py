@@ -105,3 +105,28 @@ class AIAnalysis(BaseModel):
     guidance: AIGuidance
     uncertainty: AIUncertainty
     metadata: AIMetadata
+
+class SearchMetadata(BaseModel):
+    score: float
+    relationship: str
+    index: str
+
+class RelatedIncident(BaseModel):
+    incidentId: str
+    summary: str
+    status: str
+    createdAt: str
+    resolution: Optional[str] = None
+    searchMetadata: SearchMetadata
+
+class ResponsePacket(BaseModel):
+    packetId: str
+    incidentId: str
+    generatedAt: str
+    incidentSummary: str
+    assessment: AIAssessment
+    historicalContextAvailable: bool
+    relatedIncidents: List[RelatedIncident]
+    decision: Decision
+    recommendation: str
+    provenance: str
