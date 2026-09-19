@@ -89,9 +89,11 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         }
         targetPosRef.current = { x: targetX, y: targetY };
 
-        const escapeDur = 600;
-        dot.style.transition = `transform ${escapeDur}ms cubic-bezier(0.2, 0.8, 0.2, 1), filter ${escapeDur}ms ease`;
-        dot.style.transform = `translate(calc(-50% + ${targetX}px), ${targetY}px) scale(0.9) rotate(45deg)`;
+        // Zero gravity float away
+        const escapeDur = 2500 + Math.random() * 1000;
+        dot.style.transition = `transform ${escapeDur}ms ease-out, filter ${escapeDur}ms ease`;
+        const randomRot = Math.random() * 90 - 45;
+        dot.style.transform = `translate(calc(-50% + ${targetX}px), ${targetY}px) scale(0.8) rotate(${randomRot}deg)`;
         dot.style.filter = 'brightness(1.5)';
 
         await wait(escapeDur);
@@ -102,25 +104,22 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
       else if (phase === 'DOT_AT_DESTINATION') {
         const { x, y } = targetPosRef.current;
         
-        dot.style.transition = 'transform 3s ease-in-out';
-        dot.style.transform = `translate(calc(-50% + ${x}px), ${y - 8}px) scale(0.9) rotate(60deg)`;
+        // Gentle float at destination
+        dot.style.transition = 'transform 4s ease-in-out';
+        dot.style.transform = `translate(calc(-50% + ${x + 3}px), ${y - 4}px) scale(0.8) rotate(10deg)`;
         
-        await wait(400);
+        await wait(800);
         if (checkCancel()) return;
 
-        container.style.transition = 'transform 0.4s ease-in-out';
-        container.style.transform = 'rotate(-6deg)';
-        await wait(500);
+        // Container tilt left (anticipation)
+        container.style.transition = 'transform 0.8s ease-in-out';
+        container.style.transform = 'rotate(-3deg) translateY(-2px)';
+        await wait(1000);
         if (checkCancel()) return;
         
-        await wait(300);
-        if (checkCancel()) return;
-
-        container.style.transform = 'rotate(8deg)';
-        await wait(500);
-        if (checkCancel()) return;
-        
-        await wait(300);
+        // Container tilt right
+        container.style.transform = 'rotate(4deg) translateX(2px)';
+        await wait(1000);
         if (checkCancel()) return;
 
         setPhase('SEARCH');
@@ -129,7 +128,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
       else if (phase === 'SEARCH') {
         const { x: targetX, y: targetY } = targetPosRef.current;
         const dist = Math.sqrt(targetX*targetX + targetY*targetY);
-        const travelDur = Math.min(Math.max(dist / 300 * 1000, 900), 1800);
+        const travelDur = Math.min(Math.max(dist / 200 * 1000, 1200), 2200);
 
         container.style.transition = 'none';
         dot.style.transition = 'none';
@@ -160,7 +159,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
             
             const dotRelX = targetX - x;
             const dotRelY = targetY - y;
-            dot.style.transform = `translate(calc(-50% + ${dotRelX}px), ${dotRelY}px) scale(0.9) rotate(60deg)`;
+            dot.style.transform = `translate(calc(-50% + ${dotRelX}px), ${dotRelY}px) scale(0.8) rotate(10deg)`;
 
             if (p < 1) requestAnimationFrame(step);
             else resolve();
@@ -175,35 +174,33 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
       else if (phase === 'RECONNECT') {
         const { x: targetX, y: targetY } = targetPosRef.current;
         
-        dot.style.transition = 'transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease';
+        await wait(100);
+        if (checkCancel()) return;
+
+        // Soft reconnect
+        dot.style.transition = 'transform 250ms ease-out, filter 250ms ease';
         dot.style.transform = `translate(-50%, 0) scale(1) rotate(0deg)`; 
         dot.style.filter = 'brightness(1)';
         
-        sparkle.style.transition = 'none';
-        sparkle.style.opacity = '1';
-        sparkle.style.transform = `translate(-50%, -100%) scale(1.5)`;
+        // Tiny pulse on body
+        container.style.transition = 'transform 300ms ease-in-out';
+        container.style.transform = `translate(${targetX}px, ${targetY}px) scale(1.02) rotate(0deg)`;
         
-        container.style.transition = 'transform 300ms ease';
-        container.style.transform = `translate(${targetX}px, ${targetY}px) scale(1.05) rotate(0deg)`;
-        container.style.filter = 'brightness(1.2)';
-        
-        await wait(300);
+        await wait(250);
         if (checkCancel()) return;
 
-        sparkle.style.transition = 'opacity 400ms ease';
-        sparkle.style.opacity = '0';
         container.style.transform = `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`;
-        container.style.filter = 'brightness(1)';
 
-        await wait(300);
+        await wait(250);
         if (checkCancel()) return;
+        
         setPhase('RETURN_HOME');
       }
 
       else if (phase === 'RETURN_HOME') {
         const { x: targetX, y: targetY } = targetPosRef.current;
         const dist = Math.sqrt(targetX*targetX + targetY*targetY);
-        const returnDur = Math.min(Math.max(dist / 300 * 1000, 900), 1400);
+        const returnDur = Math.min(Math.max(dist / 200 * 1000, 1000), 1500);
 
         container.style.transition = 'none';
         dot.style.transition = 'none';
