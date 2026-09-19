@@ -127,6 +127,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         }}>
           <button 
             type="button"
+            className="icon-button"
             onClick={() => setSheetOpen(true)}
             aria-label="Add attachment"
             disabled={isSubmitting || isRecording}
@@ -199,6 +200,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           {canSend && !isRecording ? (
             <button 
               type="submit" 
+              className="icon-button"
               disabled={isSubmitting}
               aria-label="Send observation"
               style={{ 
@@ -218,6 +220,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           ) : (
             <button 
               type="button" 
+              className="icon-button"
               onClick={handleMicClick}
               disabled={isSubmitting}
               aria-label={isRecording ? "Stop recording" : "Voice input"}
@@ -239,6 +242,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
         {/* Camera Button Outside Pill */}
         <button 
           type="button"
+          className="pill-button"
           onClick={onCameraClick}
           disabled={isSubmitting || isRecording}
           aria-label="Open Camera"

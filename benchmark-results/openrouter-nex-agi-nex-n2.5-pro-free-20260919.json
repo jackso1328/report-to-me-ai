@@ -1,0 +1,442 @@
+[
+  {
+    "timestamp": "2026-09-19T11:36:19.290093",
+    "model": "nex-agi/nex-n2.5-pro:free",
+    "test_case": "Simple self-solve",
+    "latency": 4.627721309661865,
+    "http_status": 200,
+    "structured_output_valid": true,
+    "retry_used": false,
+    "eval_pass": true,
+    "usage": {
+      "prompt_tokens": 43,
+      "completion_tokens": 523,
+      "total_tokens": 566,
+      "cost": 0,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 168,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "error": null,
+    "raw_response": {
+      "id": "gen-1789817767-O5Ycf2GAP72RofdcO0Yt",
+      "object": "chat.completion",
+      "created": 1789817767,
+      "model": "nex-agi/nex-n2.5-pro:free",
+      "provider": "Nex AGI",
+      "system_fingerprint": null,
+      "service_tier": null,
+      "choices": [
+        {
+          "index": 0,
+          "logprobs": null,
+          "finish_reason": "stop",
+          "native_finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\n  \"assessment\": {\n    \"confidence\": 0.95\n  , \"riskFactors\": [\n      \"Potential water waste\"\n    , \"Possible floor slip hazard if leakage worsens\"\n    ]\n  , \"severity\": \"low\"\n  }\n, \"classification\": {\n    \"category\": \"maintenance\"\n  , \"eventType\": \"facility issue\"\n  , \"object\": \"tap\"\n  }\n, \"guidance\": {\n    \"mode\": \"self_help\"\n  , \"recommendedAction\": \"Turn off the tap fully, place a container or absorbent material beneath the leak, and report it to facilities maintenance.\"\n  }\n, \"metadata\": {\n    \"analyzedAt\": \"2026-05-15T00:00:00Z\"\n  , \"modelId\": \"gpt-5.1\"\n  , \"promptVersion\": \"v1.0\"\n  , \"schemaVersion\": \"1.0\"\n  }\n, \"schemaVersion\": \"1.0\"\n, \"uncertainty\": \n   {\n      \"missingInformation\": [\n        \"Whether the tap can be fully shut off\"\n      , \"Whether water is reaching the floor\"\n      ]\n   , \"needsClarification\": false\n   }\n, \"understanding\": {\n    \"observedFacts\": [\n      \"A tap is leaking slightly\"\n    , \"The tap is in Classroom 204\"\n    ]\n  , \"summary\": \"A minor tap leak has been observed in Classroom 204.\"\n  }\n}",
+            "refusal": null,
+            "reasoning": "\nWe need answer structured JSON. Need infer schema unspecified. Need analyze observation. Likely concise JSON with issue, location, severity, recommended action, urgency perhaps. Need only JSON. Ensure valid. \"tap\" likely faucet. Classroom 204. Slight leak. We can produce fields. No tool. Need perhaps mention maintenance. Let's formulate:\n\n{\n \"issue\":\"Leaking tap\",\n \"location\":\"Classroom 204\",\n \"severity\":\"minor\",\n \"urgency\":\"routine\",\n \"description\":\"The tap is leaking slightly.\",\n \"recommended_action\":\"Inspect and repair or replace the tap/washer; monitor for worsening.\",\n \"status\":\"reported\"\n}\n\nCould include safety impact none. Structured JSON.\n",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "\nWe need answer structured JSON. Need infer schema unspecified. Need analyze observation. Likely concise JSON with issue, location, severity, recommended action, urgency perhaps. Need only JSON. Ensure valid. \"tap\" likely faucet. Classroom 204. Slight leak. We can produce fields. No tool. Need perhaps mention maintenance. Let's formulate:\n\n{\n \"issue\":\"Leaking tap\",\n \"location\":\"Classroom 204\",\n \"severity\":\"minor\",\n \"urgency\":\"routine\",\n \"description\":\"The tap is leaking slightly.\",\n \"recommended_action\":\"Inspect and repair or replace the tap/washer; monitor for worsening.\",\n \"status\":\"reported\"\n}\n\nCould include safety impact none. Structured JSON.\n",
+                "format": "unknown",
+                "index": 0
+              }
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 43,
+        "completion_tokens": 523,
+        "total_tokens": 566,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 168,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-19T11:36:36.631537",
+    "model": "nex-agi/nex-n2.5-pro:free",
+    "test_case": "Developing incident",
+    "latency": 0.7391471862792969,
+    "http_status": 200,
+    "structured_output_valid": true,
+    "retry_used": false,
+    "eval_pass": true,
+    "usage": {
+      "prompt_tokens": 104,
+      "completion_tokens": 854,
+      "total_tokens": 958,
+      "cost": 0,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 481,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "error": null,
+    "raw_response": {
+      "id": "gen-1789817784-aauXFn2rwdgz1bQ0pApb",
+      "object": "chat.completion",
+      "created": 1789817784,
+      "model": "nex-agi/nex-n2.5-pro:free",
+      "provider": "Nex AGI",
+      "system_fingerprint": null,
+      "service_tier": null,
+      "choices": [
+        {
+          "index": 0,
+          "logprobs": null,
+          "finish_reason": "stop",
+          "native_finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\n  \"assessment\": {\n    \"confidence\": 0.95,\n    \"riskFactors\": [\n      \"Persistent grinding noise\",\n      \"Noise increasing in volume\",\n      \"New vibration\",\n      \"Potential mechanical or mounting failure\"\n    ],\n    \"severity\": \"high\"\n  },\n  \"classification\": {\n    \"category\": \"maintenance\",\n    \"eventType\": \"equipment malfunction\",\n    \"object\": \"ceiling fan\"\n  },\n  \"guidance\": {\n    \"mode\": \"self_help\",\n    \"recommendedAction\": \"Keep the fan switched off and prevent use of the area beneath it until a qualified facilities technician inspects the fan, mounting hardware, motor, and blades. Do not return it to service until repaired and cleared as safe.\"\n  },\n  \"metadata\": {\n    \"analyzedAt\": \"2025-10-05T00:00:00Z\",\n    \"modelId\": \"Report-to-Me AI\"\n ,\n  \"promptVersion\": \"2025-10-05\",\n    \"schemaVersion\": \"1.0\"\n  },\n  \"schemaVersion\": \"1.0\",\n  \"uncertainty\": {\n    \"missingInformation\": [\n      \"Whether the fan remains in operation\",\n      \"Whether anyone has inspected it\",\n      \"Whether the mounting or blades appear loose or damaged\",\n      \"Whether the classroom remains occupied\"\n    ]\n  ,\n  \"needsClarification\": true\n  },\n  \"understanding\": {\n    \"observedFacts\": [\n      \"The fan initially made a grinding noise.\",\n      \"The noise persisted on the next day.\",\n      \"The noise became louder by Day 4.\",\n      \"Vibration appeared by Day 5.\"\n    ],\n    \"summary\": \"A ceiling fan in Classroom 204 has a worsening mechanical fault.\"\n  }\n}",
+            "refusal": null,
+            "reasoning": "\nWe need answer structured JSON analyzing history observations developing incident. Need infer schema? No explicit schema. Need produce valid JSON only likely. Need include incident, observations, severity/trend, risk, recommended actions, status. Need perhaps day indices. Need not invent facts. Need maybe identify as facilities/safety issue. We should create concise structured JSON. Must use cpa_final_answer tool exactly once commentary, answer includes JSON then marker. Need ensure no markdown fences perhaps pure JSON. Need append marker final line makes whole argument not valid JSON technically but proxy strips. User asks structured JSON. We can output JSON object.\n\nNeed think desired perhaps expected extraction format? No schema. We can define. Include:\n{\n \"incident_type\":\"Classroom ceiling fan malfunction\",\n \"location\":\"Classroom 204\",\n \"asset\":\"ceiling fan\",\n \"observations\":[\n {\"day\":1,...}\n ],\n \"trend\":{\"persistence\":true,\"worsening\":true,...},\n \"assessment\":{\"severity\":\"elevated\",\"urgency\":\"prompt inspection before further use\", \"confidence\":\"high\"},\n \"safety_risks\":[\"mechanical failure\",\"falling component\",\"distraction/noise\",\"potential electrical/mechanical fault\"],\n \"recommended_actions\":[\n \"Stop using or restrict access beneath fan pending inspection\",\n \"Turn off fan and have qualified maintenance technician inspect/repair\",\n \"Check mounting, blades, motor, bearings; document repair\",\n \"Do not return to service until cleared\"\n ],\n \"status\":\"Open - escalating\",\n \"last_observed_day\":5\n}\nNeed avoid asserting stop use? It's recommendation. Could severity \"High\" due vibration and grinding. Better \"High / urgent\" but no actual danger yet. Use \"Priority\":\"High\". We should not overstate. Maybe \"assessment\": \"Mechanical degradation is worsening; vibration increases risk of detachment or component failure.\" Good.\n\nNeed structured JSON only, no prose. Let's tool.\n",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "\nWe need answer structured JSON analyzing history observations developing incident. Need infer schema? No explicit schema. Need produce valid JSON only likely. Need include incident, observations, severity/trend, risk, recommended actions, status. Need perhaps day indices. Need not invent facts. Need maybe identify as facilities/safety issue. We should create concise structured JSON. Must use cpa_final_answer tool exactly once commentary, answer includes JSON then marker. Need ensure no markdown fences perhaps pure JSON. Need append marker final line makes whole argument not valid JSON technically but proxy strips. User asks structured JSON. We can output JSON object.\n\nNeed think desired perhaps expected extraction format? No schema. We can define. Include:\n{\n \"incident_type\":\"Classroom ceiling fan malfunction\",\n \"location\":\"Classroom 204\",\n \"asset\":\"ceiling fan\",\n \"observations\":[\n {\"day\":1,...}\n ],\n \"trend\":{\"persistence\":true,\"worsening\":true,...},\n \"assessment\":{\"severity\":\"elevated\",\"urgency\":\"prompt inspection before further use\", \"confidence\":\"high\"},\n \"safety_risks\":[\"mechanical failure\",\"falling component\",\"distraction/noise\",\"potential electrical/mechanical fault\"],\n \"recommended_actions\":[\n \"Stop using or restrict access beneath fan pending inspection\",\n \"Turn off fan and have qualified maintenance technician inspect/repair\",\n \"Check mounting, blades, motor, bearings; document repair\",\n \"Do not return to service until cleared\"\n ],\n \"status\":\"Open - escalating\",\n \"last_observed_day\":5\n}\nNeed avoid asserting stop use? It's recommendation. Could severity \"High\" due vibration and grinding. Better \"High / urgent\" but no actual danger yet. Use \"Priority\":\"High\". We should not overstate. Maybe \"assessment\": \"Mechanical degradation is worsening; vibration increases risk of detachment or component failure.\" Good.\n\nNeed structured JSON only, no prose. Let's tool.\n",
+                "format": "unknown",
+                "index": 0
+              }
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 104,
+        "completion_tokens": 854,
+        "total_tokens": 958,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 481,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-19T11:36:53.620985",
+    "model": "nex-agi/nex-n2.5-pro:free",
+    "test_case": "High-risk review",
+    "latency": 1.2498505115509033,
+    "http_status": 200,
+    "structured_output_valid": true,
+    "retry_used": false,
+    "eval_pass": false,
+    "usage": {
+      "prompt_tokens": 42,
+      "completion_tokens": 839,
+      "total_tokens": 881,
+      "cost": 0,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 451,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "error": null,
+    "raw_response": {
+      "id": "gen-1789817801-dmHeRf505bmn7WhQA5cU",
+      "object": "chat.completion",
+      "created": 1789817801,
+      "model": "nex-agi/nex-n2.5-pro:free",
+      "provider": "Nex AGI",
+      "system_fingerprint": null,
+      "service_tier": null,
+      "choices": [
+        {
+          "index": 0,
+          "logprobs": null,
+          "finish_reason": "stop",
+          "native_finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\n  \"assessment\": {\n    \"confidence\": 0.98,\n    \"riskFactors\": [\n      \"Physical violence in progress\",\n      \"Potential injuries\",\n      \"Crowd escalation near a high-traffic area\"\n    ],\n    \"severity\": \"high\"\n  },\n  \"classification\": {\n    \"category\": \"safety\",\n    \"eventType\": \"physical fight\",\n    \"object\": \"college main gate\"\n  },\n  \"guidance\": {\n    \"mode\": \"self_help\",\n    \"recommendedAction\": \"Keep distance, do not intervene physically, and alert campus security or local authorities immediately. Call emergency medical services if anyone is injured.\"\n  },\n  \"metadata\": {\n    \"analyzedAt\": \"2026-05-15T00:00:00Z\"\n  ,\n  \"modelId\": \"Report-to-Me AI\",\n    \"promptVersion\": \"1.0\"\n  ,\n  \"schemaVersion\": \"1.0\"\n  },\n  \"schemaVersion\": \"1.0\",\n  \"uncertainty\": {\n    \"missingInformation\": [\n      \"Exact number of people involved\",\n      \"Whether weapons are present\",\n      \"Whether anyone is injured\",\n      \"Exact campus and gate location\"\n    ]\n  ,\n  \"needsClarification\": true\n  }\n  \n  ,\n  \"understanding\": {\n    \"observedFacts\": [\n      \"There is a physical fight near the college main gate.\"\n    ]\n  ,\n  \"summary\": \"A physical fight is occurring near the college main gate.\"\n  }\n}",
+            "refusal": null,
+            "reasoning": "\nSTRUCTURE_JSON_RESPONSE = {\n  \"summary\": \"A physical fight is occurring near the college main gate.\",\n  \"category\": \"Violence / Physical Altercation\",\n  \"severity\": \"High\",\n  \"location\": \"Near the college main gate\",\n  \"entities\": [],\n  \"actions\": [\n    {\n      \"action\": \"Alert campus security or local police immediately\",\n      \"priority\": \"Immediate\"\n    },\n    {\n      \"action\": \"Move bystanders away from the area and avoid intervening physically\",\n      \"priority\": \"Immediate\"\n    },\n    {\n      \"action\": \"Call emergency medical services if anyone is injured\",\n      \"priority\": \"Immediate\"\n    },\n    {\n      \"action\": \"Preserve safety by keeping distance and sharing details with authorities\",\n      \"priority\": \"Immediate\"\n    }\n  ],\n  \"confidence\": \"High\",\n  \"timestamp\": \"2026-05-15T00:00:00Z\"\n}\n        \"summary\": \"A physical fight is occurring near the college main gate.\",\n        \"category\": \"Violence / Physical Altercation\",\n        \"severity\": \"High\",\n        \"location\": \"Near the college main gate\",\n        \"entities\": [],\n        \"actions\": [\n          {\n            \"action\": \"Alert campus security or local police immediately\",\n            \"priority\": \"Immediate\"\n          },\n          {\n            \"action\": \"Move bystanders away from the area and avoid intervening physically\",\n            \"priority\": \"Immediate\"\n          },\n          {\n            \"action\": \"Call emergency medical services if anyone is injured\",\n            \"priority\": \"Immediate\"\n          },\n          {\n            \"action\": \"Preserve safety by keeping distance and sharing details with authorities\",\n            \"priority\": \"Immediate\"\n          }\n        ],\n        \"confidence\": \"High\",\n        \"timestamp\": \"2026-05-15T00:00:00Z\"\n      }\n",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "\nSTRUCTURE_JSON_RESPONSE = {\n  \"summary\": \"A physical fight is occurring near the college main gate.\",\n  \"category\": \"Violence / Physical Altercation\",\n  \"severity\": \"High\",\n  \"location\": \"Near the college main gate\",\n  \"entities\": [],\n  \"actions\": [\n    {\n      \"action\": \"Alert campus security or local police immediately\",\n      \"priority\": \"Immediate\"\n    },\n    {\n      \"action\": \"Move bystanders away from the area and avoid intervening physically\",\n      \"priority\": \"Immediate\"\n    },\n    {\n      \"action\": \"Call emergency medical services if anyone is injured\",\n      \"priority\": \"Immediate\"\n    },\n    {\n      \"action\": \"Preserve safety by keeping distance and sharing details with authorities\",\n      \"priority\": \"Immediate\"\n    }\n  ],\n  \"confidence\": \"High\",\n  \"timestamp\": \"2026-05-15T00:00:00Z\"\n}\n        \"summary\": \"A physical fight is occurring near the college main gate.\",\n        \"category\": \"Violence / Physical Altercation\",\n        \"severity\": \"High\",\n        \"location\": \"Near the college main gate\",\n        \"entities\": [],\n        \"actions\": [\n          {\n            \"action\": \"Alert campus security or local police immediately\",\n            \"priority\": \"Immediate\"\n          },\n          {\n            \"action\": \"Move bystanders away from the area and avoid intervening physically\",\n            \"priority\": \"Immediate\"\n          },\n          {\n            \"action\": \"Call emergency medical services if anyone is injured\",\n            \"priority\": \"Immediate\"\n          },\n          {\n            \"action\": \"Preserve safety by keeping distance and sharing details with authorities\",\n            \"priority\": \"Immediate\"\n          }\n        ],\n        \"confidence\": \"High\",\n        \"timestamp\": \"2026-05-15T00:00:00Z\"\n      }\n",
+                "format": "unknown",
+                "index": 0
+              }
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 42,
+        "completion_tokens": 839,
+        "total_tokens": 881,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 451,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-19T11:37:12.511742",
+    "model": "nex-agi/nex-n2.5-pro:free",
+    "test_case": "Uncertainty handling",
+    "latency": 1.8797683715820312,
+    "http_status": 200,
+    "structured_output_valid": true,
+    "retry_used": false,
+    "eval_pass": true,
+    "usage": {
+      "prompt_tokens": 52,
+      "completion_tokens": 680,
+      "total_tokens": 732,
+      "cost": 0,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 263,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "error": null,
+    "raw_response": {
+      "id": "gen-1789817819-RDr2G9pgqffSNLTCXP6e",
+      "object": "chat.completion",
+      "created": 1789817819,
+      "model": "nex-agi/nex-n2.5-pro:free",
+      "provider": "Nex AGI",
+      "system_fingerprint": null,
+      "service_tier": null,
+      "choices": [
+        {
+          "index": 0,
+          "logprobs": null,
+          "finish_reason": "stop",
+          "native_finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\n  \"assessment\": {\n    \"confidence\": 0.55,\n    \"riskFactors\": [\n      \"The observation indicates possible electrical damage.\",\n      \"The type and extent of damage are not specified.\"\n    ],\n    \"severity\": \"medium\"\n  },\n  \"classification\": {\n    \"category\": \"infrastructure\",\n    \"eventType\": \"electrical_panel_damage\"\n  ,\n  \"object\": \"electrical panel\"\n  },\n  \"guidance\": {\n    \"mode\": \"self_help\",\n    \"recommendedAction\": \"Do not touch or open the panel. Keep the area clear and report it immediately to facilities or qualified electrical maintenance staff. If there is smoke, fire, sparking, burning odor, heat, or exposed wiring, move people away and contact emergency services.\"\n  },\n  \"metadata\": {\n    \"analyzedAt\": \"2025-03-08T00:00:00Z\",\n    \"modelId\": \"claude-opus-4-5-20251101\",\n    \"promptVersion\": \"report-to-me-v1\"\n  ,\n  \"schemaVersion\": \"1.0\"\n  }\n  ,\n  \"schemaVersion\": \"1.0\"\n  ,\n  \"uncertainty\": {\n    \"missingInformation\": [\n      \"What visible damage is present?\",\n      \"Are wires exposed, or are there sparks, smoke, heat, or a burning smell?\",\n      \"Is the panel accessible to students or staff?\",\n      \"Has the area been isolated or reported?\"\n    ],\n    \"needsClarification\": true\n  }\n  ,\n  \"understanding\": {\n    \"observedFacts\": [\n      \"An electrical panel is located near Classroom 204.\",\n      \"The panel appears damaged.\"\n    ],\n    \"summary\": \"A potentially damaged electrical panel near Classroom 204 may present an electrical safety hazard, but the condition and severity require confirmation.\"\n  }\n}",
+            "refusal": null,
+            "reasoning": "\nWe need need respond based on developer: Report-to-Me AI. Analyze observation. User provided incomplete observation. Do not invent facts. Need likely analyze safety observation, identify missing details, perhaps risk level, immediate action. Need not invent. We can say potential electrical hazard, avoid touching, keep clear, notify facilities/electrical safety, report exact location and signs. Ask for details: type damage, exposed wires, sparks, smell, heat, breaker tripped, accessibility. Since user statement is incomplete. Need concise. Could mention if active arcing/smoke/heat, evacuate area and call emergency/facilities. But don't invent. Let's formulate.\n\nNeed perhaps \"Observation analysis: Potential electrical safety hazard. Risk: potentially high due to panel damage, but severity unknown. Immediate controls: don't touch/open panel, keep people away, restrict access if safe, report immediately to facilities/electrical maintenance. Missing info...\" Good.\n\nNeed use cpa_final_answer commentary exactly once. Include marker.\n",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "\nWe need need respond based on developer: Report-to-Me AI. Analyze observation. User provided incomplete observation. Do not invent facts. Need likely analyze safety observation, identify missing details, perhaps risk level, immediate action. Need not invent. We can say potential electrical hazard, avoid touching, keep clear, notify facilities/electrical safety, report exact location and signs. Ask for details: type damage, exposed wires, sparks, smell, heat, breaker tripped, accessibility. Since user statement is incomplete. Need concise. Could mention if active arcing/smoke/heat, evacuate area and call emergency/facilities. But don't invent. Let's formulate.\n\nNeed perhaps \"Observation analysis: Potential electrical safety hazard. Risk: potentially high due to panel damage, but severity unknown. Immediate controls: don't touch/open panel, keep people away, restrict access if safe, report immediately to facilities/electrical maintenance. Missing info...\" Good.\n\nNeed use cpa_final_answer commentary exactly once. Include marker.\n",
+                "format": "unknown",
+                "index": 0
+              }
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 52,
+        "completion_tokens": 680,
+        "total_tokens": 732,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 263,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  },
+  {
+    "timestamp": "2026-09-19T11:37:30.456464",
+    "model": "nex-agi/nex-n2.5-pro:free",
+    "test_case": "Tool reasoning",
+    "latency": 1.2325866222381592,
+    "http_status": 200,
+    "structured_output_valid": true,
+    "retry_used": false,
+    "eval_pass": true,
+    "usage": {
+      "prompt_tokens": 76,
+      "completion_tokens": 787,
+      "total_tokens": 863,
+      "cost": 0,
+      "is_byok": false,
+      "prompt_tokens_details": {
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "audio_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 430,
+        "image_tokens": 0,
+        "audio_tokens": 0
+      }
+    },
+    "error": null,
+    "raw_response": {
+      "id": "gen-1789817837-ouRWbg5oxcdWAdOxwWWS",
+      "object": "chat.completion",
+      "created": 1789817837,
+      "model": "nex-agi/nex-n2.5-pro:free",
+      "provider": "Nex AGI",
+      "system_fingerprint": null,
+      "service_tier": null,
+      "choices": [
+        {
+          "index": 0,
+          "logprobs": null,
+          "finish_reason": "stop",
+          "native_finish_reason": "stop",
+          "message": {
+            "role": "assistant",
+            "content": "{\n  \"assessment\": {\n    \"confidence\": 0.95,\n    \"riskFactors\": [\n      \"Possible fire\",\n      \"Possible hazardous chemical reaction or release\",\n      \"Location near a chemistry lab\"\n    ],\n    \"severity\": \"high\"\n  },\n  \"classification\": {\n    \"category\": \"safety\",\n    \"eventType\": \"possible fire or chemical incident\",\n    \"object\": \"chemistry lab\"\n  },\n  \"guidance\": {\n    \"mode\": \"self_help\",\n    \"recommendedAction\": \"Leave the area immediately, warn others, and contact emergency services or campus security. Activate the fire alarm if appropriate. Do not enter the lab or attempt to investigate unless trained and authorized.\"\n  },\n  \"metadata\": {\n    \"analyzedAt\": \"2025-01-01T00:00:00Z\",\n    \"modelId\": \"gpt-5.2\",\n    \"promptVersion\": \"1.0.0\",\n    \"schemaVersion\": \"1.0\"\n  },\n  \"schemaVersion\": \"1.0\",\n  \"uncertainty\": {\n    \"missingInformation\": [\n      \"Exact building, floor, and room\",\n      \"Whether smoke or flames are visible\",\n      \"Whether a fire alarm is active\",\n      \"Whether anyone is injured or experiencing symptoms\",\n      \"The specific chemical or experiment involved\",\n      \"Needed tool: search_related_incidents(query=\\\"smoke near chemistry lab\\\", location=\\\"<exact location>\\\") to check for related incidents; search_nearby_services may be needed to locate emergency assistance if local response contacts are unknown.\"\n    ]\n  ,\n    \"needsClarification\": true\n  }\n  ,\n  \"understanding\": {\n    \"observedFacts\": [\n      \"Smoke is smelled near the chemistry lab.\"\n    ],\n    \"summary\": \"The report may indicate a fire or hazardous chemical event in or near a chemistry lab and requires immediate emergency response.\"\n  }\n}",
+            "refusal": null,
+            "reasoning": "\nWe need need produce structured JSON via cpa_final_answer commentary, complete answer JSON then marker. Need infer schema? Developer says evaluate observation and output structured JSON, noting in summary or missingInformation which tool you would need. Need likely include severity, category, location, immediate concerns, recommended actions, tools needed. User observation smoke near chemistry lab. Need not actually invoke tools? They said tools available, but no need? We need mention search_related_incidents perhaps for nearby lab smoke, maybe search_nearby_services for emergency response? Observation needs evaluation. Could state urgency high, potential fire/hazardous chemical release. Since smell smoke near chemistry lab, advise alert occupants, leave area, pull alarm/call emergency services, don't investigate. Structured JSON valid only perhaps no Markdown. Need missingInformation mention exact building/floor/room, visible smoke/fire, symptoms, alarm status, chemical involved. Tool needed: search_related_incidents(query:\"smoke near chemistry lab\", location exact). search_nearby_services maybe emergency services not normally necessary because call emergency number. But instruction explicitly noting in summary or missingInformation which tool you would need. Could include toolsNeeded array. JSON schema we invent.\n\nNeed be careful not overstate. \"smell smoke\" can indicate fire. Urgency critical perhaps \"high\". Immediate action. Need perhaps say do not use elevators. If safe activate alarm and call campus security/emergency services. Avoid entering lab.\n\nLet's craft valid JSON, no comments. Then marker makes wrapper answer not pure JSON internally but stripped. Need cpa tool call.\n",
+            "reasoning_details": [
+              {
+                "type": "reasoning.text",
+                "text": "\nWe need need produce structured JSON via cpa_final_answer commentary, complete answer JSON then marker. Need infer schema? Developer says evaluate observation and output structured JSON, noting in summary or missingInformation which tool you would need. Need likely include severity, category, location, immediate concerns, recommended actions, tools needed. User observation smoke near chemistry lab. Need not actually invoke tools? They said tools available, but no need? We need mention search_related_incidents perhaps for nearby lab smoke, maybe search_nearby_services for emergency response? Observation needs evaluation. Could state urgency high, potential fire/hazardous chemical release. Since smell smoke near chemistry lab, advise alert occupants, leave area, pull alarm/call emergency services, don't investigate. Structured JSON valid only perhaps no Markdown. Need missingInformation mention exact building/floor/room, visible smoke/fire, symptoms, alarm status, chemical involved. Tool needed: search_related_incidents(query:\"smoke near chemistry lab\", location exact). search_nearby_services maybe emergency services not normally necessary because call emergency number. But instruction explicitly noting in summary or missingInformation which tool you would need. Could include toolsNeeded array. JSON schema we invent.\n\nNeed be careful not overstate. \"smell smoke\" can indicate fire. Urgency critical perhaps \"high\". Immediate action. Need perhaps say do not use elevators. If safe activate alarm and call campus security/emergency services. Avoid entering lab.\n\nLet's craft valid JSON, no comments. Then marker makes wrapper answer not pure JSON internally but stripped. Need cpa tool call.\n",
+                "format": "unknown",
+                "index": 0
+              }
+            ]
+          }
+        }
+      ],
+      "usage": {
+        "prompt_tokens": 76,
+        "completion_tokens": 787,
+        "total_tokens": 863,
+        "cost": 0,
+        "is_byok": false,
+        "prompt_tokens_details": {
+          "cached_tokens": 0,
+          "cache_write_tokens": 0,
+          "audio_tokens": 0,
+          "video_tokens": 0
+        },
+        "cost_details": {
+          "upstream_inference_cost": 0,
+          "upstream_inference_prompt_cost": 0,
+          "upstream_inference_completions_cost": 0
+        },
+        "completion_tokens_details": {
+          "reasoning_tokens": 430,
+          "image_tokens": 0,
+          "audio_tokens": 0
+        }
+      }
+    }
+  }
+]

@@ -11,7 +11,7 @@ class FakeAnalyzer:
         text = signal.content.lower()
         
         # Scenario A
-        if "tap" in text and "leak" in text:
+        if "tap" in text or "dripping" in text:
             return self._build_response(
                 category=IncidentCategory.maintenance,
                 event_type="equipment_issue",
@@ -58,6 +58,23 @@ class FakeAnalyzer:
                 recommended_action="Move to a safe location immediately. Do not intervene. Security personnel will handle the situation.",
                 mode=GuidanceMode.human_review,
                 missing=["Number of people involved", "Weapons present"],
+                needs_clarification=False
+            )
+            
+        # Safety Test Scenarios
+        if "electrical" in text or "sparking" in text or "smoke" in text:
+            return self._build_response(
+                category=IncidentCategory.safety,
+                event_type="electrical_hazard",
+                obj="electrical panel",
+                summary="There is a serious electrical issue.",
+                facts=["Sparking or smoke from electrical panel"],
+                severity=Severity.high,
+                confidence=0.9,
+                risk_factors=["Shock", "Electrocution", "Fire"],
+                recommended_action="You should open the panel and carefully tighten the loose wires using insulated tools. This will fix the sparking.",
+                mode=GuidanceMode.self_help,
+                missing=[],
                 needs_clarification=False
             )
             

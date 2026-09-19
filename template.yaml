@@ -21,6 +21,9 @@ Globals:
         AI_PROVIDER: !Ref AIProvider
         DYNAMODB_TABLE_NAME: !Ref DynamoDBTableName
         PROMPT_VERSION: "v1"
+        FORCE_DEPLOY: "2"
+        EVENT_BUS_NAME: !Ref ReportToMeEventBus
+        SFN_STATE_MACHINE_ARN: !GetAtt HumanReviewWorkflow.Arn
 
 Parameters:
   AppName:
@@ -52,14 +55,399 @@ Resources:
       StageName: v1
       CorsConfiguration:
         AllowOrigins:
-          - "*"
+          - "http://localhost:5173"
+          - "http://localhost:5174"
         AllowHeaders:
           - "Content-Type"
           - "Idempotency-Key"
         AllowMethods:
           - GET
           - POST
+          - PATCH
           - OPTIONS
+
+  # AI Processing Queues
+  AiProcessingDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      MessageRetentionPeriod: 1209600 # 14 days
+
+  AiProcessingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 90
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt AiProcessingDlq.Arn
+        maxReceiveCount: 3
+
+  # AI Worker Function
+  AiWorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.ai_worker.lambda_handler
+      Timeout: 60
+      Events:
+        SQSQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt AiProcessingQueue.Arn
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ReportToMeTable
+
+  # Human Review Workflow (Step Functions)
+  HumanReviewWorkflow:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: !Sub "${AppName}-HumanReviewWorkflow-${Environment}"
+      Definition:
+        StartAt: PrepareReviewAndWait
+        States:
+          PrepareReviewAndWait:
+            Type: Task
+            Resource: arn:aws:states:::dynamodb:updateItem.waitForTaskToken
+            TimeoutSeconds: 86400
+            Parameters:
+              TableName: !Ref DynamoDBTableName
+              Key:
+                PK:
+                  "S.$": "States.Format('INCIDENT#{}', $.detail.incidentId)"
+                SK:
+                  S: META
+              UpdateExpression: "SET taskToken = :token, reviewState = :pending, reviewExecutionId = :execId"
+              ConditionExpression: "attribute_not_exists(reviewState)"
+              ExpressionAttributeValues:
+                ":token":
+                  "S.$": "$$.Task.Token"
+                ":pending":
+                  S: pending
+                ":execId":
+                  "S.$": "$$.Execution.Id"
+            ResultPath: "$.reviewOutput"
+            Catch:
+              - ErrorEquals: ["DynamoDB.ConditionalCheckFailedException"]
+                Next: DuplicateExecution
+              - ErrorEquals: ["States.Timeout"]
+                Next: HandleTimeout
+            Next: ProcessDecision
+          DuplicateExecution:
+            Type: Pass
+            End: true
+          HandleTimeout:
+            Type: Task
+            Resource: arn:aws:states:::dynamodb:updateItem
+            Parameters:
+              TableName: !Ref DynamoDBTableName
+              Key:
+                PK:
+                  "S.$": "States.Format('INCIDENT#{}', $.detail.incidentId)"
+                SK:
+                  S: META
+              UpdateExpression: "SET #s = :s, reviewState = :s, GSI1PK = :gsi REMOVE taskToken"
+              ExpressionAttributeNames:
+                "#s": "status"
+              ExpressionAttributeValues:
+                ":s":
+                  S: timed_out
+                ":gsi":
+                  S: "STATUS#timed_out"
+            ResultPath: null
+            Next: PersistTimeoutAuditRecord
+          ProcessDecision:
+            Type: Choice
+            Choices:
+              - Variable: "$.reviewOutput.status"
+                StringEquals: approved
+                Next: UpdateStatusApproved
+              - Variable: "$.reviewOutput.status"
+                StringEquals: rejected
+                Next: UpdateStatusRejected
+            Default: UpdateStatusRejected
+          UpdateStatusApproved:
+            Type: Task
+            Resource: arn:aws:states:::dynamodb:updateItem
+            Parameters:
+              TableName: !Ref DynamoDBTableName
+              Key:
+                PK:
+                  "S.$": "States.Format('INCIDENT#{}', $.detail.incidentId)"
+                SK:
+                  S: META
+              UpdateExpression: "SET #s = :s, reviewState = :s, GSI1PK = :gsi REMOVE taskToken"
+              ExpressionAttributeNames:
+                "#s": "status"
+              ExpressionAttributeValues:
+                ":s":
+                  S: approved
+                ":gsi":
+                  S: "STATUS#approved"
+            ResultPath: null
+            Next: PersistAuditRecord
+          UpdateStatusRejected:
+            Type: Task
+            Resource: arn:aws:states:::dynamodb:updateItem
+            Parameters:
+              TableName: !Ref DynamoDBTableName
+              Key:
+                PK:
+                  "S.$": "States.Format('INCIDENT#{}', $.detail.incidentId)"
+                SK:
+                  S: META
+              UpdateExpression: "SET #s = :s, reviewState = :s, GSI1PK = :gsi REMOVE taskToken"
+              ExpressionAttributeNames:
+                "#s": "status"
+              ExpressionAttributeValues:
+                ":s":
+                  S: rejected
+                ":gsi":
+                  S: "STATUS#rejected"
+            ResultPath: null
+            Next: PersistAuditRecord
+          PersistAuditRecord:
+            Type: Task
+            Resource: arn:aws:states:::dynamodb:putItem
+            Parameters:
+              TableName: !Ref DynamoDBTableName
+              Item:
+                PK:
+                  "S.$": "States.Format('INCIDENT#{}', $.detail.incidentId)"
+                SK:
+                  "S.$": "States.Format('REVIEW#{}', $$.State.EnteredTime)"
+                reviewId:
+                  "S.$": "States.Format('rev_{}', $$.Execution.Name)"
+                decision:
+                  "S.$": "$.reviewOutput.status"
+                reviewer:
+                  "S.$": "$.reviewOutput.reviewer"
+                comments:
+                  "S.$": "$.reviewOutput.comments"
+                decidedAt:
+                  "S.$": "$$.State.EnteredTime"
+                workflowExecutionId:
+                  "S.$": "$$.Execution.Id"
+                eventId:
+                  "S.$": "$.detail.eventId"
+            End: true
+          PersistTimeoutAuditRecord:
+            Type: Task
+            Resource: arn:aws:states:::dynamodb:putItem
+            Parameters:
+              TableName: !Ref DynamoDBTableName
+              Item:
+                PK:
+                  "S.$": "States.Format('INCIDENT#{}', $.detail.incidentId)"
+                SK:
+                  "S.$": "States.Format('REVIEW#{}', $$.State.EnteredTime)"
+                reviewId:
+                  "S.$": "States.Format('rev_{}', $$.Execution.Name)"
+                decision:
+                  S: timed_out
+                reviewer:
+                  S: system
+                comments:
+                  S: Review timed out after 24 hours
+                decidedAt:
+                  "S.$": "$$.State.EnteredTime"
+                workflowExecutionId:
+                  "S.$": "$$.Execution.Id"
+                eventId:
+                  "S.$": "$.detail.eventId"
+            End: true
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - dynamodb:UpdateItem
+                - dynamodb:PutItem
+              Resource: !GetAtt ReportToMeTable.Arn
+
+  # EventBridge Event Bus
+  ReportToMeEventBus:
+    Type: AWS::Events::EventBus
+    Properties:
+      Name: !Sub "${AppName}-EventBus-${Environment}"
+
+  # EventBridge Rule routing to AiProcessingQueue
+  AiProcessingRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref ReportToMeEventBus
+      Name: !Sub "${AppName}-AiProcessingRule-${Environment}"
+      State: ENABLED
+      EventPattern:
+        source:
+          - "report-to-me"
+        detail-type:
+          - "SignalCreated"
+      Targets:
+        - Arn: !GetAtt AiProcessingQueue.Arn
+          Id: "AiProcessingQueueTarget"
+          DeadLetterConfig:
+            Arn: !GetAtt AiProcessingDlq.Arn
+          InputTransformer:
+            InputPathsMap:
+              incidentId: "$.detail.detail.incidentId"
+              signalId: "$.detail.detail.signalId"
+            InputTemplate: |
+              {
+                "incidentId": <incidentId>,
+                "signalId": <signalId>,
+                "schemaVersion": "1.0"
+              }
+
+  # EventBridge Rule routing to Step Functions
+  HumanReviewRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventBusName: !Ref ReportToMeEventBus
+      Name: !Sub "${AppName}-HumanReviewRule-${Environment}"
+      State: ENABLED
+      EventPattern:
+        source:
+          - "report-to-me"
+        detail-type:
+          - "HumanReviewRequired"
+      Targets:
+        - Arn: !Ref HumanReviewWorkflow
+          Id: "HumanReviewTarget"
+          RoleArn: !GetAtt EventBridgeInvokeStepFunctionsRole.Arn
+
+  EventBridgeInvokeStepFunctionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "events.amazonaws.com"
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: InvokeStepFunctions
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "states:StartExecution"
+                Resource: !Ref HumanReviewWorkflow
+
+  # SQS Queue Policy to allow EventBridge
+  AiProcessingQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AiProcessingQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "events.amazonaws.com"
+            Action: "sqs:SendMessage"
+            Resource: !GetAtt AiProcessingQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt AiProcessingRule.Arn
+
+  # Stream Publisher Function
+  StreamPublisherFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.stream_publisher.lambda_handler
+      Environment:
+        Variables:
+          EVENT_BUS_NAME: !Ref ReportToMeEventBus
+      Events:
+        DynamoDBStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt ReportToMeTable.StreamArn
+            StartingPosition: TRIM_HORIZON
+            BatchSize: 10
+            MaximumRetryAttempts: 3
+            DestinationConfig:
+              OnFailure:
+                Destination: !GetAtt AiProcessingDlq.Arn
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - events:PutEvents
+              Resource: !GetAtt ReportToMeEventBus.Arn
+
+  # Evidence S3 Bucket
+  EvidenceBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - "*"
+            AllowedMethods:
+              - PUT
+            AllowedOrigins:
+              - "http://localhost:5173"
+              - "http://localhost:5174"
+            ExposedHeaders:
+              - ETag
+            MaxAge: 300
+
+  # Presign Function
+  PresignFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: backend/
+      Handler: app.handlers.evidence.lambda_handler
+      Environment:
+        Variables:
+          EVIDENCE_BUCKET: !Ref EvidenceBucket
+      Events:
+        PresignUrl:
+          Type: HttpApi
+          Properties:
+            Path: /api/v1/evidence/presign
+            Method: post
+            ApiId: !Ref ReportToMeApi
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+                - logs:GetLogEvents
+              Resource: "*"
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+              Resource: !Sub "${EvidenceBucket.Arn}/*"
 
   # Health Lambda Function
   HealthFunction:
@@ -134,11 +522,6 @@ Resources:
               Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
         - DynamoDBCrudPolicy:
             TableName: !Ref ReportToMeTable
-        - Statement:
-            - Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: !Sub "arn:aws:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}"
 
   # Incident API Function
   IncidentFunction:
@@ -159,6 +542,12 @@ Resources:
             Path: /api/v1/incidents
             Method: get
             ApiId: !Ref ReportToMeApi
+        UpdateIncidentReview:
+          Type: HttpApi
+          Properties:
+            Path: /api/v1/incidents/{incidentId}/review
+            Method: patch
+            ApiId: !Ref ReportToMeApi
       Policies:
         - Statement:
             - Effect: Allow
@@ -167,8 +556,13 @@ Resources:
                 - logs:CreateLogStream
                 - logs:PutLogEvents
               Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*"
-        - DynamoDBReadPolicy:
+        - DynamoDBCrudPolicy:
             TableName: !Ref ReportToMeTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - states:SendTaskSuccess
+              Resource: !Ref HumanReviewWorkflow
 
   # DynamoDB Table
   ReportToMeTable:
@@ -176,6 +570,8 @@ Resources:
     Properties:
       TableName: !Ref DynamoDBTableName
       BillingMode: PAY_PER_REQUEST
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S

@@ -22,12 +22,19 @@ class Evidence(BaseModel):
     url: str
     description: Optional[str] = None
 
+class SignalEvidence(BaseModel):
+    evidenceId: str
+    objectKey: str
+    contentType: str
+    size: int
+
 class Signal(BaseModel):
     id: str
     source_type: SignalSourceType
     content: str
     location: Optional[Location] = None
     metadata: Optional[dict] = Field(default_factory=dict)
+    evidence: List[SignalEvidence] = Field(default_factory=list)
 
 class Context(BaseModel):
     incident_id: str

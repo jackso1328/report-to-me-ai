@@ -2,15 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface CameraCaptureProps {
-  onCapture: (photoDataUrl: string) => void;
+  onCapture: (photoDataUrl: string, blob?: Blob) => void;
   onClose: () => void;
 }
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isHolding, setIsHolding] = useState(false);
-  const holdTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -42,9 +40,6 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
       if (stream) {
         stream.getTracks().forEach(t => t.stop());
       }
-      if (holdTimerRef.current) {
-        clearTimeout(holdTimerRef.current);
-      }
     };
   }, [onClose]);
 
@@ -59,26 +54,14 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
     
     ctx.drawImage(videoRef.current, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-    onCapture(dataUrl);
-  };
-
-  const handlePointerDown = () => {
-    holdTimerRef.current = window.setTimeout(() => {
-      setIsHolding(true);
-    }, 250);
-  };
-
-  const handlePointerUp = () => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-    }
-    if (isHolding) {
-      setIsHolding(false);
-      // Visual indicator for video hold finish (photo captured as fallback in current milestone)
-      takePhoto();
-    } else {
-      takePhoto();
-    }
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        onCapture(dataUrl, blob);
+      } else {
+        onCapture(dataUrl);
+      }
+    }, 'image/jpeg', 0.85);
   };
 
   return (
@@ -126,9 +109,14 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
           color: 'rgba(255,255,255,0.7)', 
           fontSize: '0.8rem',
           letterSpacing: '1px',
-          textTransform: 'uppercase'
+          textTransform: 'uppercase',
+          fontWeight: 500,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(12px)',
+          padding: '6px 12px',
+          borderRadius: '16px'
         }}>
-          {isHolding ? 'Recording Video...' : 'Tap for photo, hold for video'}
+          Photo
         </span>
       </div>
 
@@ -161,32 +149,30 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose
           alignItems: 'center',
           zIndex: 210
         }}>
-          {/* Dual-action Capture Button */}
+          {/* Premium Capture Button */}
           <button 
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
-            aria-label="Capture photo or video"
+            onClick={takePhoto}
+            className="icon-button"
+            aria-label="Capture photo"
             style={{
-              width: '76px',
-              height: '76px',
+              width: '80px',
+              height: '80px',
               borderRadius: '50%',
-              border: `4px solid ${isHolding ? '#ef4444' : '#ffffff'}`,
-              backgroundColor: isHolding ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.2)',
+              border: '4px solid #ffffff',
+              backgroundColor: 'rgba(255,255,255,0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              transform: isHolding ? 'scale(1.15)' : 'scale(1)',
-              boxShadow: isHolding ? '0 0 30px rgba(239, 68, 68, 0.6)' : '0 8px 30px rgba(0,0,0,0.5)'
+              boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+              cursor: 'pointer'
             }}
           >
             <div style={{
-              width: isHolding ? '36px' : '58px',
-              height: isHolding ? '36px' : '58px',
-              borderRadius: isHolding ? '8px' : '50%',
-              backgroundColor: isHolding ? '#ef4444' : '#ffffff',
-              transition: 'all 0.2s ease'
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: '#ffffff',
+              boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)'
             }} />
           </button>
         </div>

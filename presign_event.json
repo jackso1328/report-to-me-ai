@@ -1,0 +1,8 @@
+{
+  "requestContext": {
+    "http": {
+      "method": "POST"
+    }
+  },
+  "body": "{\"contentType\": \"image/jpeg\", \"size\": 12345}"
+}

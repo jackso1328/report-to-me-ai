@@ -80,6 +80,17 @@ button {
 button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
+  border-radius: 4px; /* Ensure outline looks good on square-ish buttons, though most are rounded */
+}
+
+/* Base button hover for interactive elements that don't override it */
+@media (hover: hover) {
+  button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+  button:not(:disabled):active {
+    transform: translateY(1px);
+  }
 }
 
 button:disabled {
@@ -108,9 +119,24 @@ input, textarea {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+  padding-bottom: max(5rem, env(safe-area-inset-bottom)); /* Add extra padding for bottom composer */
   overflow-y: auto;
   position: relative;
   z-index: 10;
+}
+
+/* Refined responsive breakpoints */
+@media (max-width: 640px) {
+  .content-area {
+    padding: 1rem;
+    padding-bottom: max(6rem, env(safe-area-inset-bottom));
+  }
+  
+  /* Ensure composer doesn't touch edges on very narrow screens */
+  .composer-container {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
 }
 
 /* Animations */
@@ -214,5 +240,33 @@ input, textarea {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+
+/* UI Component Classes */
+.icon-button {
+  transition: color 0.2s, background-color 0.2s, transform 0.2s;
+}
+.icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  transform: scale(1.05);
+}
+[data-theme='light'] .icon-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.pill-button {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pill-button:hover {
+  background-color: var(--surface-hover);
+  border-color: var(--border-focus);
+}
+
+.menu-item {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.menu-item:hover {
+  background-color: var(--surface-hover);
 }
 

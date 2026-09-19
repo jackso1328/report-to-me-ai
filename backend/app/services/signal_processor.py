@@ -2,15 +2,14 @@ import uuid
 from typing import Dict, Any, Optional
 
 from app.domain.models import Signal, Location
-from app.domain.enums import SignalSourceType, IncidentStatus
-from app.ai.analyzer_factory import get_analyzer
-from app.services.decision_engine import DecisionEngine
+from app.domain.enums import SignalSourceType, IncidentStatus, ProcessingState
 from app.repositories.incident_repository import IncidentRepository
+from app.config.settings import settings
+import boto3
+import json
 
 class SignalProcessor:
     def __init__(self, repository: Optional[IncidentRepository] = None):
-        self.analyzer = get_analyzer()
-        self.decision_engine = DecisionEngine()
         self.repository = repository or IncidentRepository()
 
     def process_signal(self, payload: dict, idempotency_key: Optional[str] = None) -> Dict[str, Any]:
@@ -30,46 +29,39 @@ class SignalProcessor:
         loc_data = payload.get("location")
         location = Location(**loc_data) if loc_data else None
 
+        evidence_data = payload.get("evidence", [])
+        from app.domain.models import SignalEvidence
+        evidence_list = [SignalEvidence(**ev) for ev in evidence_data]
+
         signal = Signal(
             id=str(uuid.uuid4()),
             source_type=SignalSourceType(source.get("type", "text")),
             content=source.get("content"),
             location=location,
-            metadata=payload.get("metadata", {})
+            metadata=payload.get("metadata", {}),
+            evidence=evidence_list
         )
 
-        # 2. Send Signal to AIAnalyzer
-        ai_analysis = self.analyzer.analyze_signal(signal)
-
-        # 3. Generate Incident ID
+        # 2. Generate Incident ID
         incident_id = str(uuid.uuid4())
 
-        # 4. Run deterministic Decision Engine
-        decision = self.decision_engine.evaluate(ai_analysis, incident_id)
-
-        # 5. Determine Incident Status
-        if decision.requires_human_review:
-            status = IncidentStatus.human_review
-        elif decision.path.value == "self_solve":
-            status = IncidentStatus.self_solved
-        elif decision.path.value == "monitor":
-            status = IncidentStatus.monitoring
-        else:
-            status = IncidentStatus.analyzed
-
-        # 6. Persist signal, AI analysis, decision, and incident metadata
+        # 3. Save initial state (Status = new, ProcessingState = pending)
         self.repository.save_incident_aggregate(
             incident_id=incident_id,
             signal=signal,
-            analysis=ai_analysis,
-            decision=decision,
-            status=status,
-            idempotency_key=idempotency_key
+            analysis=None,
+            decision=None,
+            status=IncidentStatus.new,
+            idempotency_key=idempotency_key,
+            processing_state=ProcessingState.pending.value
         )
+        
+        # 4. Return the created incident
+        # Note: The DynamoDB stream publisher will observe the Signal insertion and publish 
+        # an event to EventBridge -> SQS -> AIWorker.
+        # We no longer publish to SQS directly here.
 
-        # 7. Return the resulting incident information
-        # To avoid another roundtrip, we can build the response or just fetch it
-        # Fetching it ensures consistency with DB representation
+        # 5. Return the created incident
         incident = self.repository.get_incident(incident_id)
         if not incident:
             raise RuntimeError("Failed to retrieve incident after persistence")

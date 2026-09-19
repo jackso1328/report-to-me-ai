@@ -5,48 +5,118 @@ import { HeroPrompt } from './components/HeroPrompt';
 import { MessageComposer } from './components/MessageComposer';
 import { CameraCapture } from './components/CameraCapture';
 import { AnalysisResult } from './components/AnalysisResult';
-import { submitSignal } from './api/client';
-import type { IncidentResponse } from './api/client';
+import { submitSignal, getPresignedUrl, uploadToS3, getIncidentById } from './api/client';
+import type { IncidentResponse, EvidenceMetadata, SignalPayload } from './api/client';
 import type { AttachmentData } from './types';
+import { ReviewQueue } from './components/ReviewQueue';
+import { IncidentDetail } from './components/IncidentDetail';
 import './index.css';
 
-type AppState = 'idle' | 'camera' | 'submitting' | 'result' | 'error';
+type AppState = 'idle' | 'camera' | 'submitting' | 'polling' | 'result' | 'error' | 'reviewQueue' | 'incidentDetail';
 
 function App() {
   const [appState, setAppState] = useState<AppState>('idle');
   const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   const [result, setResult] = useState<IncidentResponse | null>(null);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [processingPhase, setProcessingPhase] = useState<number>(1);
 
   useEffect(() => {
-    let timer: number;
+    let timer: number | undefined;
     if (appState === 'submitting') {
       setProcessingPhase(1);
-      timer = window.setTimeout(() => {
-        setProcessingPhase(2);
-      }, 1400);
     }
     return () => clearTimeout(timer);
   }, [appState]);
+
+  useEffect(() => {
+    let pollInterval: number;
+    let timeout: number;
+
+    const pollIncident = async (id: string) => {
+      try {
+        const data = await getIncidentById(id);
+        if (data.status !== 'new' && data.processingState !== 'queued' && data.processingState !== 'pending') {
+          if (data.processingState === 'failed') {
+            setErrorMsg("Your observation was recorded, but analysis could not be completed yet.");
+            setAppState('error');
+          } else {
+            setResult(data);
+            setAppState('result');
+          }
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
+    };
+
+    if (appState === 'polling' && result?.id) {
+      // Poll every 2 seconds
+      pollInterval = window.setInterval(() => {
+        setProcessingPhase(prev => (prev === 1 ? 2 : 1)); // toggle phases for animation
+        pollIncident(result.id);
+      }, 2000);
+
+      // Timeout after 30 seconds
+      timeout = window.setTimeout(() => {
+        setErrorMsg("Your observation was recorded, but analysis is taking longer than expected. You can check back later.");
+        setAppState('error');
+      }, 30000);
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [appState, result?.id]);
 
   const handleSend = async (text: string) => {
     setAppState('submitting');
     setErrorMsg(null);
     
     try {
-      const payload = {
+      const evidenceMetadataList: EvidenceMetadata[] = [];
+      
+      // Upload attachments if any
+      if (attachments.length > 0) {
+        for (const attachment of attachments) {
+          if (attachment.file) {
+            // Get presigned URL
+            const presigned = await getPresignedUrl(attachment.file);
+            
+            // Upload to S3
+            await uploadToS3(presigned.uploadUrl, attachment.file);
+            
+            // Add metadata
+            evidenceMetadataList.push({
+              evidenceId: presigned.evidenceId,
+              objectKey: presigned.objectKey,
+              contentType: attachment.file.type,
+              size: attachment.file.size
+            });
+          }
+        }
+      }
+
+      const payload: SignalPayload = {
         source: {
           type: 'text',
           content: text || (attachments.length > 0 ? 'An observation with attached evidence was provided.' : 'An observation was provided.')
-        }
+        },
+        ...(evidenceMetadataList.length > 0 && { evidence: evidenceMetadataList })
       };
 
       const res = await submitSignal(payload);
       
       setResult(res);
-      setAppState('result');
       setAttachments([]);
+
+      if (res.processingState === 'queued' || res.processingState === 'pending') {
+        setAppState('polling');
+      } else {
+        setAppState('result');
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Something went wrong. Please try again.');
       setAppState('error');
@@ -71,14 +141,17 @@ function App() {
   return (
     <div className="app-container">
       <Starfield />
-      <TopBar />
+      <TopBar 
+        onNavigateHome={() => setAppState('idle')} 
+        onNavigateReview={() => setAppState('reviewQueue')} 
+      />
       
       <div className="content-area">
         {appState === 'idle' && (
           <HeroPrompt />
         )}
         
-        {appState === 'submitting' && (
+        {(appState === 'submitting' || appState === 'polling') && (
           <div className="animate-fade-in" style={{ 
             display: 'flex',
             flexDirection: 'column',
@@ -89,24 +162,51 @@ function App() {
             padding: '2rem'
           }}>
             <div style={{ 
-              marginBottom: '1.5rem', 
-              fontSize: '2rem',
+              marginBottom: '2rem', 
+              fontSize: '2.5rem',
               color: 'var(--text-primary)',
               animation: 'pulseStar 2s ease-in-out infinite'
             }}>
               ✦
             </div>
-            <p style={{
-              fontSize: '1.1rem',
-              color: 'var(--text-secondary)',
-              letterSpacing: '0.3px',
-              fontWeight: 300,
-              transition: 'opacity 0.3s ease'
-            }}>
-              {processingPhase === 1 
-                ? 'Understanding what you noticed...' 
-                : 'Figuring out what might help...'}
-            </p>
+            {appState === 'submitting' && (
+              <p style={{
+                fontSize: '1.2rem',
+                color: 'var(--text-primary)',
+                letterSpacing: '0.5px',
+                fontWeight: 400
+              }}>
+                Observation received...
+              </p>
+            )}
+            {appState === 'polling' && (
+              <>
+                <p style={{
+                  fontSize: '1.2rem',
+                  color: 'var(--text-primary)',
+                  letterSpacing: '0.5px',
+                  fontWeight: 400,
+                  transition: 'opacity 0.5s ease',
+                  opacity: processingPhase === 1 ? 1 : 0,
+                  position: 'absolute',
+                  marginTop: '4rem'
+                }}>
+                  Understanding what happened...
+                </p>
+                <p style={{
+                  fontSize: '1.2rem',
+                  color: 'var(--text-primary)',
+                  letterSpacing: '0.5px',
+                  fontWeight: 400,
+                  transition: 'opacity 0.5s ease',
+                  opacity: processingPhase === 2 ? 1 : 0,
+                  position: 'absolute',
+                  marginTop: '4rem'
+                }}>
+                  Evaluating guidance...
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -114,13 +214,31 @@ function App() {
           <AnalysisResult result={result} />
         )}
 
+        {appState === 'reviewQueue' && (
+          <ReviewQueue onSelectIncident={(id) => {
+            setSelectedIncidentId(id);
+            setAppState('incidentDetail');
+          }} />
+        )}
+
+        {appState === 'incidentDetail' && selectedIncidentId && (
+          <IncidentDetail 
+            incidentId={selectedIncidentId} 
+            onBack={() => setAppState('reviewQueue')} 
+          />
+        )}
+
         {appState === 'error' && (
           <div className="animate-fade-in" style={{ textAlign: 'center', maxWidth: '420px', padding: '2rem' }}>
-            <div style={{ marginBottom: '1.25rem', fontSize: '2rem', color: 'var(--danger)' }}>!</div>
-            <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <div style={{ marginBottom: '1.5rem', fontSize: '2.5rem', color: 'var(--text-muted)' }}>✦</div>
+            <p style={{ marginBottom: '0.5rem', color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 500 }}>
+              Something interrupted the analysis.
+            </p>
+            <p style={{ marginBottom: '2.5rem', color: 'var(--text-secondary)', lineHeight: 1.5, fontSize: '0.95rem' }}>
               {errorMsg}
             </p>
             <button 
+              className="pill-button"
               onClick={handleReset}
               style={{
                 padding: '12px 28px',
@@ -193,8 +311,9 @@ function App() {
       {appState === 'camera' && (
         <CameraCapture 
           onClose={() => setAppState('idle')}
-          onCapture={(photoUrl) => {
-            addAttachment({ type: 'image', url: photoUrl });
+          onCapture={(photoUrl, blob) => {
+            const attachmentFile = blob ? new File([blob], `capture_${Date.now()}.jpg`, { type: 'image/jpeg' }) : undefined;
+            addAttachment({ type: 'image', url: photoUrl, file: attachmentFile });
             setAppState('idle');
           }}
         />

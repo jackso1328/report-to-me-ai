@@ -31,6 +31,13 @@ class GuidanceMode(str, Enum):
     seek_assistance = "seek_assistance"
     human_review = "human_review"
 
+class ProcessingState(str, Enum):
+    pending = "pending"
+    queued = "queued"
+    processing = "processing"
+    analyzed = "analyzed"
+    failed = "failed"
+
 class IncidentStatus(str, Enum):
     new = "new"
     analyzing = "analyzing"
@@ -41,6 +48,8 @@ class IncidentStatus(str, Enum):
     human_review = "human_review"
     actioned = "actioned"
     resolved = "resolved"
+    approved = "approved"
+    rejected = "rejected"
 
 class Trend(str, Enum):
     new = "new"

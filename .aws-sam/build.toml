@@ -7,6 +7,6 @@ architecture = "x86_64"
 handler = "app.handlers.health.lambda_handler"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["HealthFunction", "AnalyzeFunction", "SignalFunction", "IncidentFunction"]
+functions = ["PresignFunction", "HealthFunction", "AnalyzeFunction", "SignalFunction", "IncidentFunction"]
 
 [layer_build_definitions]

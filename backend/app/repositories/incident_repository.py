@@ -6,7 +6,7 @@ import json
 
 from app.config.settings import settings
 from app.domain.models import Signal, AIAnalysis, Decision
-from app.domain.enums import IncidentStatus
+from app.domain.enums import IncidentStatus, ProcessingState
 
 class IncidentRepository:
     def __init__(self, dynamodb_client=None):
@@ -16,10 +16,14 @@ class IncidentRepository:
     def save_incident_aggregate(self, 
                                 incident_id: str, 
                                 signal: Signal, 
-                                analysis: AIAnalysis, 
-                                decision: Decision, 
-                                status: IncidentStatus, 
-                                idempotency_key: Optional[str] = None):
+                                analysis: Optional[AIAnalysis] = None, 
+                                decision: Optional[Decision] = None, 
+                                status: IncidentStatus = IncidentStatus.new, 
+                                idempotency_key: Optional[str] = None,
+                                recurrence_count: int = 1,
+                                first_observed_at: Optional[str] = None,
+                                related_signal_ids: Optional[List[str]] = None,
+                                processing_state: str = "pending"):
         
         timestamp = datetime.utcnow().isoformat() + "Z"
         
@@ -33,10 +37,18 @@ class IncidentRepository:
             "createdAt": {"S": timestamp},
             "updatedAt": {"S": timestamp},
             "status": {"S": status.value},
-            "category": {"S": analysis.classification.category.value},
-            "severity": {"S": analysis.assessment.severity.value},
-            "analysis": {"S": analysis.model_dump_json()}
+            "category": {"S": analysis.classification.category.value if analysis else "other"},
+            "severity": {"S": analysis.assessment.severity.value if analysis else "low"},
+            "recurrenceCount": {"N": str(recurrence_count)},
+            "firstObservedAt": {"S": first_observed_at or timestamp},
+            "processingState": {"S": processing_state}
         }
+        
+        if related_signal_ids:
+            incident_item["relatedSignalIds"] = {"S": json.dumps(related_signal_ids)}
+        
+        if analysis:
+            incident_item["analysis"] = {"S": analysis.model_dump_json()}
 
         # Signal
         signal_item = {
@@ -51,16 +63,17 @@ class IncidentRepository:
         if signal.location:
             signal_item["location"] = {"S": signal.location.model_dump_json()}
 
-        # Decision
-        decision_item = {
-            "PK": {"S": f"INCIDENT#{incident_id}"},
-            "SK": {"S": "DECISION"},
-            "id": {"S": decision.id},
-            "path": {"S": decision.path.value},
-            "reasoning": {"S": decision.reasoning},
-            "requiresHumanReview": {"BOOL": decision.requires_human_review},
-            "createdAt": {"S": timestamp}
-        }
+        decision_item = None
+        if decision:
+            decision_item = {
+                "PK": {"S": f"INCIDENT#{incident_id}"},
+                "SK": {"S": "DECISION"},
+                "id": {"S": decision.id},
+                "path": {"S": decision.path.value},
+                "reasoning": {"S": decision.reasoning},
+                "requiresHumanReview": {"BOOL": decision.requires_human_review},
+                "createdAt": {"S": timestamp}
+            }
 
         # Signal Pointer (for direct signal lookups)
         signal_pointer_item = {
@@ -69,6 +82,26 @@ class IncidentRepository:
             "incidentId": {"S": incident_id},
             "createdAt": {"S": timestamp}
         }
+
+        # Evidence Items
+        evidence_items = []
+        for ev in signal.evidence:
+            evidence_items.append({
+                "Put": {
+                    "TableName": self.table_name,
+                    "Item": {
+                        "PK": {"S": f"INCIDENT#{incident_id}"},
+                        "SK": {"S": f"EVIDENCE#{ev.evidenceId}"},
+                        "signalId": {"S": signal.id},
+                        "incidentId": {"S": incident_id},
+                        "evidenceId": {"S": ev.evidenceId},
+                        "objectKey": {"S": ev.objectKey},
+                        "contentType": {"S": ev.contentType},
+                        "size": {"N": str(ev.size)},
+                        "createdAt": {"S": timestamp}
+                    }
+                }
+            })
 
         transact_items = [
             {
@@ -86,16 +119,20 @@ class IncidentRepository:
             {
                 "Put": {
                     "TableName": self.table_name,
-                    "Item": decision_item
-                }
-            },
-            {
-                "Put": {
-                    "TableName": self.table_name,
                     "Item": signal_pointer_item
                 }
             }
         ]
+        
+        if decision_item:
+            transact_items.append({
+                "Put": {
+                    "TableName": self.table_name,
+                    "Item": decision_item
+                }
+            })
+
+        transact_items.extend(evidence_items)
 
         if idempotency_key:
             transact_items.append({
@@ -142,8 +179,15 @@ class IncidentRepository:
                     incident['severity'] = item['severity']['S']
                     incident['createdAt'] = item['createdAt']['S']
                     incident['updatedAt'] = item['updatedAt']['S']
+                    incident['processingState'] = item.get('processingState', {}).get('S', 'pending')
+                    incident['recurrenceCount'] = int(item.get('recurrenceCount', {}).get('N', '1'))
+                    incident['firstObservedAt'] = item.get('firstObservedAt', {}).get('S', incident['createdAt'])
+                    if 'relatedSignalIds' in item:
+                        incident['relatedSignalIds'] = json.loads(item['relatedSignalIds']['S'])
                     if 'analysis' in item:
                         incident['analysis'] = json.loads(item['analysis']['S'])
+                    if 'taskToken' in item:
+                        incident['taskToken'] = item['taskToken']['S']
                 elif sk.startswith('SIGNAL#'):
                     sig = {
                         'id': item['id']['S'],
@@ -253,5 +297,115 @@ class IncidentRepository:
                 }
                 incidents.append(inc)
             return incidents
+        except ClientError as e:
+            raise e
+
+    def update_incident_status(self, incident_id: str, new_status: IncidentStatus, comments: str = "") -> None:
+        try:
+            timestamp = datetime.utcnow().isoformat() + "Z"
+            # Update the META item
+            self.dynamodb.update_item(
+                TableName=self.table_name,
+                Key={
+                    "PK": {"S": f"INCIDENT#{incident_id}"},
+                    "SK": {"S": "META"}
+                },
+                UpdateExpression="SET #status = :s, updatedAt = :u",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={
+                    ":s": {"S": new_status.value},
+                    ":u": {"S": timestamp}
+                }
+            )
+            # The StatusTimeIndex uses GSI1PK = STATUS#<status> and GSI1SK = <createdAt>#<id>
+            # But wait, DynamoDB GSIs are automatically updated when the base item attributes change!
+            # We don't need to update the index directly, BUT we DO need to update the GSI1PK and GSI1SK attributes on the META item so the GSI gets updated.
+            # Let's fix that.
+            
+            # Fetch the item first to get createdAt
+            incident = self.get_incident(incident_id)
+            if not incident:
+                raise ValueError("Incident not found")
+                
+            created_at = incident.get('createdAt', timestamp)
+            gsi1pk = f"STATUS#{new_status.value}"
+            gsi1sk = f"{created_at}#{incident_id}"
+            
+            self.dynamodb.update_item(
+                TableName=self.table_name,
+                Key={
+                    "PK": {"S": f"INCIDENT#{incident_id}"},
+                    "SK": {"S": "META"}
+                },
+                UpdateExpression="SET #status = :s, updatedAt = :u, GSI1PK = :gpk, GSI1SK = :gsk",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={
+                    ":s": {"S": new_status.value},
+                    ":u": {"S": timestamp},
+                    ":gpk": {"S": gsi1pk},
+                    ":gsk": {"S": gsi1sk}
+                }
+            )
+            
+            # Optionally we could save the review comments in a REVIEW item or append to DECISION. 
+            # For hackathon simplicity, we just change the status.
+        except ClientError as e:
+            raise e
+
+    def update_processing_state(self, incident_id: str, new_state: ProcessingState) -> None:
+        try:
+            timestamp = datetime.utcnow().isoformat() + "Z"
+            self.dynamodb.update_item(
+                TableName=self.table_name,
+                Key={
+                    "PK": {"S": f"INCIDENT#{incident_id}"},
+                    "SK": {"S": "META"}
+                },
+                UpdateExpression="SET #ps = :ps, updatedAt = :u",
+                ExpressionAttributeNames={"#ps": "processingState"},
+                ExpressionAttributeValues={
+                    ":ps": {"S": new_state.value},
+                    ":u": {"S": timestamp}
+                }
+            )
+        except ClientError as e:
+            raise e
+
+    def find_related_incidents(self, category: str, location_description: str, limit: int = 50) -> List[Dict[str, Any]]:
+        # Fetch recent incidents across all status types and filter in-memory.
+        # This is a hackathon compromise avoiding a new GSI.
+        # We will scan the last 50 items on StatusTimeIndex for relevant statuses and combine.
+        try:
+            statuses_to_check = [IncidentStatus.new, IncidentStatus.monitoring, IncidentStatus.emerging, IncidentStatus.analyzed, IncidentStatus.human_review]
+            related = []
+            
+            for status in statuses_to_check:
+                response = self.dynamodb.query(
+                    TableName=self.table_name,
+                    IndexName="StatusTimeIndex",
+                    KeyConditionExpression="GSI1PK = :gsi1pk",
+                    ExpressionAttributeValues={":gsi1pk": {"S": f"STATUS#{status.value}"}},
+                    ScanIndexForward=False,
+                    Limit=limit
+                )
+                
+                for item in response.get('Items', []):
+                    # We need the full incident to get the signals/location
+                    inc_id = item['id']['S']
+                    inc = self.get_incident(inc_id)
+                    if not inc: continue
+                    
+                    if inc.get('category') != category: continue
+                    
+                    # Check location of the signals
+                    for sig in inc.get('signals', []):
+                        loc = sig.get('location', {})
+                        if loc and loc.get('description') == location_description:
+                            related.append(inc)
+                            break # Found a match in this incident
+            
+            # Sort by createdAt descending
+            related.sort(key=lambda x: x['createdAt'], reverse=True)
+            return related
         except ClientError as e:
             raise e

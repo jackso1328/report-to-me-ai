@@ -4,27 +4,37 @@ from app.domain.models import Signal
 from app.domain.enums import DecisionPath, IncidentStatus, Severity, IncidentCategory
 from app.ai.fake_analyzer import FakeAnalyzer
 from app.services.decision_engine import DecisionEngine
-from app.services.signal_processor import SignalProcessor
+from app.services.ai_worker_service import AIWorkerService
+from app.domain.enums import IncidentCategory, Severity
 
 class TestPipeline(unittest.TestCase):
     def setUp(self):
         self.mock_repo = MagicMock()
+        self.mock_repo.get_incident.return_value = {
+            "id": "inc-test",
+            "status": "new",
+            "processingState": "queued",
+            "createdAt": "2026-01-01T00:00:00Z"
+        }
+        
+        self.worker = AIWorkerService(repository=self.mock_repo)
+        
+        # We want to use the actual Decision Engine, Safety Gate, and Fake Analyzer
+        # so we don't mock them. We only mock the repository.
+        self.mock_repo.find_related_incidents.return_value = []
+        self.worker.analyzer = FakeAnalyzer()
+        
+        from app.services.signal_processor import SignalProcessor
         self.processor = SignalProcessor(repository=self.mock_repo)
-        
-        # Override the analyzer specifically to FakeAnalyzer for tests
-        self.processor.analyzer = FakeAnalyzer()
-        
-        # Make the repo return a dummy incident so the processor doesn't fail at the end
-        self.mock_repo.get_incident.return_value = {"id": "test", "status": "analyzed"}
 
     def test_scenario_a_self_solve(self):
-        payload = {
-            "source": {
-                "type": "text",
-                "content": "The tap in Classroom 204 is leaking slightly."
-            }
+        self.mock_repo.get_signal_from_incident.return_value = {
+            "id": "sig-test",
+            "sourceType": "text",
+            "content": "The tap in Classroom 204 is leaking slightly.",
+            "createdAt": "2026-01-01T00:00:00Z"
         }
-        self.processor.process_signal(payload)
+        self.worker.process_incident_analysis("inc-test", "sig-test")
         
         # Verify repository was called
         self.mock_repo.save_incident_aggregate.assert_called_once()
@@ -40,13 +50,13 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(status, IncidentStatus.self_solved)
 
     def test_scenario_b_monitor(self):
-        payload = {
-            "source": {
-                "type": "text",
-                "content": "The ceiling fan in Classroom 204 is making a strange grinding noise."
-            }
+        self.mock_repo.get_signal_from_incident.return_value = {
+            "id": "sig-test",
+            "sourceType": "text",
+            "content": "The ceiling fan in Classroom 204 is making a strange grinding noise.",
+            "createdAt": "2026-01-01T00:00:00Z"
         }
-        self.processor.process_signal(payload)
+        self.worker.process_incident_analysis("inc-test", "sig-test")
         
         args, kwargs = self.mock_repo.save_incident_aggregate.call_args
         analysis = kwargs['analysis']
@@ -59,13 +69,13 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(status, IncidentStatus.monitoring)
 
     def test_scenario_c_human_review(self):
-        payload = {
-            "source": {
-                "type": "text",
-                "content": "There is a fight near the main gate."
-            }
+        self.mock_repo.get_signal_from_incident.return_value = {
+            "id": "sig-test",
+            "sourceType": "text",
+            "content": "There is a fight near the main gate.",
+            "createdAt": "2026-01-01T00:00:00Z"
         }
-        self.processor.process_signal(payload)
+        self.worker.process_incident_analysis("inc-test", "sig-test")
         
         args, kwargs = self.mock_repo.save_incident_aggregate.call_args
         analysis = kwargs['analysis']

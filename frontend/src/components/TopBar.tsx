@@ -1,7 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Menu, User, Sun, Moon, LogIn, Settings, Info, X } from 'lucide-react';
+import { User, Sun, Moon, LogIn, Settings, Info, X, ShieldAlert, Home } from 'lucide-react';
 
-export const TopBar: React.FC = () => {
+interface TopBarProps {
+  onNavigateHome?: () => void;
+  onNavigateReview?: () => void;
+}
+
+export const TopBar: React.FC<TopBarProps> = ({ onNavigateHome, onNavigateReview }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAuthPlaceholder, setShowAuthPlaceholder] = useState(false);
@@ -61,7 +66,8 @@ export const TopBar: React.FC = () => {
     textAlign: 'left',
     color: 'var(--text-primary)',
     fontSize: '0.9rem',
-    borderRadius: '8px'
+    borderRadius: '8px',
+    cursor: 'pointer'
   };
 
   return (
@@ -79,18 +85,21 @@ export const TopBar: React.FC = () => {
         zIndex: 50
       }}>
         <button 
-          aria-label="Menu" 
+          className="icon-button"
+          aria-label="Home" 
+          onClick={onNavigateHome}
           style={{ 
             padding: '8px', 
             color: 'var(--text-primary)',
             borderRadius: '50%'
           }}
         >
-          <Menu size={24} strokeWidth={1.5} />
+          <Home size={24} strokeWidth={1.5} />
         </button>
         
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <button 
+            className="pill-button"
             onClick={toggleTheme} 
             aria-label="Toggle Theme" 
             style={{
@@ -123,13 +132,13 @@ export const TopBar: React.FC = () => {
 
           <div ref={menuRef} style={{ position: 'relative' }}>
             <button 
+              className="icon-button"
               aria-label="Profile" 
               onClick={() => setMenuOpen(!menuOpen)}
               style={{ 
                 padding: '8px', 
                 color: menuOpen ? 'var(--accent)' : 'var(--text-primary)',
-                borderRadius: '50%',
-                transition: 'color 0.2s'
+                borderRadius: '50%'
               }}
             >
               <User size={24} strokeWidth={1.5} />
@@ -151,20 +160,28 @@ export const TopBar: React.FC = () => {
                 flexDirection: 'column',
                 gap: '2px'
               }}>
-                <button style={menuItemStyle} onClick={() => setMenuOpen(false)}>
+                <button className="menu-item" style={menuItemStyle} onClick={() => setMenuOpen(false)}>
                   <User size={18} strokeWidth={1.5} style={{ color: 'var(--text-secondary)' }} />
                   Profile
                 </button>
-                <button style={menuItemStyle} onClick={handleSignInClick}>
+                <button className="menu-item" style={menuItemStyle} onClick={handleSignInClick}>
                   <LogIn size={18} strokeWidth={1.5} style={{ color: 'var(--text-secondary)' }} />
                   Sign In
                 </button>
-                <button style={menuItemStyle} onClick={() => setMenuOpen(false)}>
+                <button className="menu-item" style={menuItemStyle} onClick={() => setMenuOpen(false)}>
                   <Settings size={18} strokeWidth={1.5} style={{ color: 'var(--text-secondary)' }} />
                   Settings
                 </button>
                 <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
-                <button style={menuItemStyle} onClick={() => setMenuOpen(false)}>
+                <button className="menu-item" style={menuItemStyle} onClick={() => {
+                  setMenuOpen(false);
+                  onNavigateReview?.();
+                }}>
+                  <ShieldAlert size={18} strokeWidth={1.5} style={{ color: 'var(--text-secondary)' }} />
+                  Review Queue
+                </button>
+                <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
+                <button className="menu-item" style={menuItemStyle} onClick={() => setMenuOpen(false)}>
                   <Info size={18} strokeWidth={1.5} style={{ color: 'var(--text-secondary)' }} />
                   About
                 </button>

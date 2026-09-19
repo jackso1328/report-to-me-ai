@@ -40,7 +40,11 @@ def handle_post(event: dict, context: Any) -> dict:
         idempotency_key = headers.get("idempotency-key") or headers.get("Idempotency-Key")
         
         incident = processor.process_signal(body, idempotency_key=idempotency_key)
-        return build_response(201, incident)
+        
+        # If it was queued or failed queueing, it's accepted. We return 202.
+        # If it was a duplicate, it will just return the existing incident.
+        status_code = 202 if incident.get("processingState") in ["queued", "pending", "failed"] else 200
+        return build_response(status_code, incident)
         
     except ValueError as e:
         logger.warning(f"Validation Error: {str(e)}")
