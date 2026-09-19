@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-type AnimPhase = 'IDLE' | 'ESCAPE' | 'DOT_AT_DESTINATION' | 'SEARCH' | 'RECONNECT' | 'RETURN_HOME';
 
-const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> = ({ onIdleReset }) => {
-  const [phase, setPhase] = useState<AnimPhase>('IDLE');
-  const bodyRef = useRef<HTMLSpanElement>(null);
-  const dotRef = useRef<HTMLSpanElement>(null);
-  const sparkleRef = useRef<HTMLSpanElement>(null);
+
+export const HeroPrompt: React.FC = () => {
+  const [phase, setPhase] = useState<'IDLE' | 'ESCAPE' | 'DOT_AT_DESTINATION' | 'SEARCH' | 'RECONNECT' | 'RETURN_HOME'>('IDLE');
+  const bodyRef = useRef<SVGSVGElement>(null);
+  const dotRef = useRef<SVGSVGElement>(null);
   const targetPosRef = useRef({ x: 0, y: 0 });
   const idleTimerRef = useRef<number | undefined>(undefined);
   const animTimeoutRef = useRef<number | undefined>(undefined);
@@ -24,13 +23,9 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
       bodyRef.current.style.filter = '';
     }
     if (dotRef.current) {
-      dotRef.current.style.transform = 'translate(-50%, 0)';
+      dotRef.current.style.transform = '';
       dotRef.current.style.transition = 'none';
       dotRef.current.style.filter = '';
-    }
-    if (sparkleRef.current) {
-      sparkleRef.current.style.opacity = '0';
-      sparkleRef.current.style.transition = 'none';
     }
 
     idleTimerRef.current = window.setTimeout(() => {
@@ -45,13 +40,18 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
   }, []);
 
   useEffect(() => {
-    onIdleReset(resetIdle);
+    const events = ['mousemove', 'keydown', 'touchstart', 'mousedown', 'click'];
+    const handleActivity = () => resetIdle();
+    events.forEach(e => window.addEventListener(e, handleActivity));
+
     resetIdle();
+
     return () => {
+      events.forEach(e => window.removeEventListener(e, handleActivity));
       if (idleTimerRef.current !== undefined) clearTimeout(idleTimerRef.current);
       if (animTimeoutRef.current !== undefined) clearTimeout(animTimeoutRef.current);
     };
-  }, [onIdleReset, resetIdle]);
+  }, [resetIdle]);
 
   useEffect(() => {
     if (phase === 'IDLE') return;
@@ -65,8 +65,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
     const runPhase = async () => {
       const body = bodyRef.current;
       const dot = dotRef.current;
-      const sparkle = sparkleRef.current;
-      if (!body || !dot || !sparkle) return;
+      if (!body || !dot) return;
 
       if (phase === 'ESCAPE') {
         const rect = body.getBoundingClientRect();
@@ -93,7 +92,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         const escapeDur = 2500 + Math.random() * 1000;
         dot.style.transition = `transform ${escapeDur}ms ease-out, filter ${escapeDur}ms ease`;
         const randomRot = Math.random() * 90 - 45;
-        dot.style.transform = `translate(calc(-50% + ${targetX}px), ${targetY}px) scale(0.8) rotate(${randomRot}deg)`;
+        dot.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.8) rotate(${randomRot}deg)`;
         dot.style.filter = 'brightness(1.5)';
 
         await wait(escapeDur);
@@ -106,7 +105,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         
         // Gentle float at destination
         dot.style.transition = 'transform 4s ease-in-out';
-        dot.style.transform = `translate(calc(-50% + ${x + 3}px), ${y - 4}px) scale(0.8) rotate(10deg)`;
+        dot.style.transform = `translate(${x + 3}px, ${y - 4}px) scale(0.8) rotate(10deg)`;
         
         await wait(800);
         if (checkCancel()) return;
@@ -158,9 +157,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
             body.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
             
             // Dot continues subtle float
-            const dotRelX = targetX;
-            const dotRelY = targetY;
-            dot.style.transform = `translate(calc(-50% + ${dotRelX}px), ${dotRelY}px) scale(0.8) rotate(10deg)`;
+            dot.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.8) rotate(10deg)`;
 
             if (p < 1) requestAnimationFrame(step);
             else resolve();
@@ -178,9 +175,9 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
         await wait(100);
         if (checkCancel()) return;
 
-        // Soft reconnect
+        // Soft reconnect - independently move dot back to its relative home
         dot.style.transition = 'transform 250ms ease-out, filter 250ms ease';
-        dot.style.transform = `translate(calc(-50% + ${targetX}px), ${targetY}px) scale(1) rotate(0deg)`; 
+        dot.style.transform = `translate(${targetX}px, ${targetY}px) scale(1) rotate(0deg)`; 
         dot.style.filter = 'brightness(1)';
         
         // Tiny pulse on body
@@ -227,7 +224,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
             const y = (1 - t) * (1 - t) * startY + 2 * (1 - t) * t * cy + t * t * endY;
             
             body.style.transform = `translate(${x}px, ${y}px)`;
-            dot.style.transform = `translate(calc(-50% + ${x}px), ${y}px)`;
+            dot.style.transform = `translate(${x}px, ${y}px)`;
 
             if (p < 1) requestAnimationFrame(step);
             else resolve();
@@ -239,7 +236,7 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
 
         body.style.transform = '';
         body.style.transition = 'none';
-        dot.style.transform = 'translate(-50%, 0)';
+        dot.style.transform = '';
         dot.style.transition = 'none';
         
         await wait(200);
@@ -251,101 +248,8 @@ const AnimatedQuestionMark: React.FC<{ onIdleReset: (fn: () => void) => void }> 
 
     runPhase();
   }, [phase, resetIdle]);
+
   const isAnimating = phase !== 'IDLE';
-
-  return (
-    <span 
-      aria-hidden="true"
-      style={{ 
-        display: 'inline-block', 
-        position: 'relative', 
-        width: '0.45em', 
-        height: '0.8em', 
-        marginLeft: '0.08em',
-        color: 'inherit',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-      }}
-    >
-      {/* BODY */}
-      <span
-        ref={bodyRef}
-        className={!isAnimating ? 'anim-body-idle' : ''}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          display: 'block'
-        }}
-      >
-        <svg viewBox="0 0 100 150" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-          <path 
-            d="M 20,45 C 20,10 80,10 80,45 C 80,75 50,85 50,115" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="16" 
-            strokeLinecap="round" 
-          />
-        </svg>
-      </span>
-
-      {/* DOT */}
-      <span
-        ref={dotRef}
-        className={!isAnimating ? 'anim-dot-idle' : ''}
-        style={{ 
-          position: 'absolute', 
-          left: '50%', 
-          bottom: '2%', // approx cy 138 in the viewbox
-          width: '0.18em', 
-          height: '0.18em', 
-          transform: 'translate(-50%, 0)',
-          pointerEvents: 'none',
-          display: 'block'
-        }}
-      >
-        <svg viewBox="0 0 20 20" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-          <circle cx="10" cy="10" r="10" fill="currentColor" />
-        </svg>
-      </span>
-      
-      {/* SPARKLE */}
-      <span 
-        ref={sparkleRef}
-        style={{ 
-          position: 'absolute', 
-          left: '50%', 
-          bottom: '2%', 
-          transform: 'translate(-50%, 0)', 
-          opacity: 0, 
-          color: 'var(--accent)', 
-          fontSize: '0.45em', 
-          pointerEvents: 'none' 
-        }}
-      >
-        ✦
-      </span>
-    </span>
-  );
-};
-
-export const HeroPrompt: React.FC = () => {
-  const resetIdleRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    const events = ['mousemove', 'keydown', 'touchstart', 'mousedown', 'click'];
-    const handleActivity = () => {
-      if (resetIdleRef.current) resetIdleRef.current();
-    };
-    
-    events.forEach(e => window.addEventListener(e, handleActivity));
-
-    return () => {
-      events.forEach(e => window.removeEventListener(e, handleActivity));
-    };
-  }, []);
 
   return (
     <div style={{
@@ -359,29 +263,83 @@ export const HeroPrompt: React.FC = () => {
       margin: 'auto 0',
       padding: '2rem 1rem'
     }}>
-      <h1 className="display-text" style={{
+      <div className="hero-heading display-text" style={{
         fontSize: 'clamp(3.5rem, 8vw, 5.2rem)',
         lineHeight: 1.05,
         marginBottom: '1.25rem',
         fontWeight: 400,
-        textShadow: '0 0 50px rgba(255,255,255,0.08)'
+        textShadow: '0 0 50px rgba(255,255,255,0.08)',
+        position: 'relative',
+        display: 'inline-flex',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        alignItems: 'flex-end',
+        gap: '0.3em'
       }}>
         <span style={{
-          display: 'block',
           animation: 'titleFirst 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards'
         }}>
           What
         </span>
-        <span style={{
-          animation: 'titleSecond 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards',
-          opacity: 0,
-          position: 'relative',
-          display: 'inline-block'
-        }}>
-          happened
-          <AnimatedQuestionMark onIdleReset={(fn) => resetIdleRef.current = fn} />
-        </span>
-      </h1>
+        
+        <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'flex-end' }}>
+          <span style={{
+            animation: 'titleSecond 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards',
+            opacity: 0
+          }}>
+            happened
+          </span>
+
+          {/* Independent Question Body */}
+          <svg 
+            ref={bodyRef}
+            className={!isAnimating ? 'anim-body-idle' : ''}
+            viewBox="0 0 40 80" 
+            style={{ 
+              width: '0.4em', 
+              height: '0.8em',
+              marginLeft: '0.08em',
+              overflow: 'visible',
+              color: 'inherit',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              pointerEvents: 'none'
+            }}
+            aria-hidden="true"
+          >
+            <path 
+              d="M 5,25 C 5,5 35,5 35,25 C 35,45 20,50 20,70" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="6" 
+              strokeLinecap="round" 
+            />
+          </svg>
+
+          {/* Independent Question Dot */}
+          <svg 
+            ref={dotRef}
+            className={!isAnimating ? 'anim-dot-idle' : ''}
+            viewBox="0 0 20 20" 
+            style={{ 
+              position: 'absolute',
+              right: '0.05em', // Visually center it under the body SVG
+              bottom: '0', 
+              width: '0.12em', 
+              height: '0.12em',
+              overflow: 'visible',
+              color: 'inherit',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+              pointerEvents: 'none'
+            }}
+            aria-hidden="true"
+          >
+            <circle cx="10" cy="10" r="10" fill="currentColor" />
+          </svg>
+        </div>
+      </div>
+
       <p style={{
         fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
         color: 'var(--text-secondary)',
