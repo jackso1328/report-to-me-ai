@@ -312,3 +312,26 @@ input, textarea {
   scrollbar-width: none;  /* Firefox */
 }
 
+@keyframes shimmerText {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    to right,
+    var(--text-muted) 20%,
+    var(--text-primary) 40%,
+    var(--text-primary) 60%,
+    var(--text-muted) 20%
+  );
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmerText 2.5s linear infinite;
+}

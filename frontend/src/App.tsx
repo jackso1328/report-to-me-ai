@@ -188,45 +188,45 @@ function App() {
                 justifyContent: 'center', 
                 alignItems: 'center' 
               }}>
-                <p style={{
+                <p 
+                  className="animate-shimmer"
+                  style={{
                   position: 'absolute',
                   fontSize: '1rem',
-                  color: 'var(--text-primary)',
                   letterSpacing: '3px',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
                   opacity: processingPhase < 15 ? 1 : 0,
-                  transform: processingPhase < 15 ? 'translateY(0) scale(1)' : 'translateY(15px) scale(0.95)',
-                  animation: processingPhase < 15 ? 'pulseStar 2s ease-in-out infinite' : 'none'
+                  transform: processingPhase < 15 ? 'translateY(0)' : 'translateY(15px)'
                 }}>
                   Understanding
                 </p>
-                <p style={{
+                <p 
+                  className="animate-shimmer"
+                  style={{
                   position: 'absolute',
                   fontSize: '1rem',
-                  color: 'var(--text-primary)',
                   letterSpacing: '3px',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
                   opacity: processingPhase >= 15 && processingPhase < 60 ? 1 : 0,
-                  transform: processingPhase >= 15 && processingPhase < 60 ? 'translateY(0) scale(1)' : processingPhase < 15 ? 'translateY(-15px) scale(0.95)' : 'translateY(15px) scale(0.95)',
-                  animation: processingPhase >= 15 && processingPhase < 60 ? 'pulseStar 2s ease-in-out infinite' : 'none'
+                  transform: processingPhase >= 15 && processingPhase < 60 ? 'translateY(0)' : processingPhase < 15 ? 'translateY(-15px)' : 'translateY(15px)'
                 }}>
                   Analyzing
                 </p>
-                <p style={{
+                <p 
+                  className="animate-shimmer"
+                  style={{
                   position: 'absolute',
                   fontSize: '1rem',
-                  color: 'var(--text-primary)',
                   letterSpacing: '3px',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
                   opacity: processingPhase >= 60 ? 1 : 0,
-                  transform: processingPhase >= 60 ? 'translateY(0) scale(1)' : 'translateY(-15px) scale(0.95)',
-                  animation: processingPhase >= 60 ? 'pulseStar 2s ease-in-out infinite' : 'none'
+                  transform: processingPhase >= 60 ? 'translateY(0)' : 'translateY(-15px)'
                 }}>
                   Finalizing
                 </p>
