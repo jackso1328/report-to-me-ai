@@ -25,7 +25,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
   const [text, setText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     isRecording,
@@ -53,11 +53,14 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 
   const canSend = (text.trim().length > 0 || attachments.length > 0) && !isSubmitting;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (canSend && !isSubmitting) {
       onSend(text);
       setText('');
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
+      }
     }
   };
 
@@ -105,19 +108,19 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
 
       <form onSubmit={handleSubmit} style={{
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-end',
         gap: '0.75rem'
       }}>
         {/* Main Floating Capsule */}
         <div style={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           flex: 1,
           backgroundColor: 'var(--glass-bg)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: `1px solid ${isFocused || isRecording ? 'var(--border-focus)' : 'var(--glass-border)'}`,
-          borderRadius: '36px',
+          borderRadius: '24px',
           padding: '0.4rem 0.5rem',
           boxShadow: isFocused || isRecording
             ? '0 12px 36px rgba(0, 0, 0, 0.35), 0 0 20px rgba(59, 130, 246, 0.12)' 
@@ -138,7 +141,8 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              opacity: isRecording ? 0.5 : 1
+              opacity: isRecording ? 0.5 : 1,
+              marginBottom: '2px'
             }}
           >
             <Plus size={22} strokeWidth={1.75} />
@@ -152,7 +156,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
               justifyContent: 'center',
               padding: '0 0.5rem',
               gap: '2px',
-              height: '24px'
+              height: '42px'
             }}>
               {waveformStream ? (
                 Array.from(waveformStream).map((val, i) => {
@@ -175,12 +179,22 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
               )}
             </div>
           ) : (
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
+              rows={1}
               placeholder="Type what you noticed..."
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 150)}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               disabled={isSubmitting}
@@ -190,17 +204,22 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                 border: 'none',
                 color: 'var(--text-primary)',
                 fontSize: '1rem',
-                padding: '0.5rem 0.25rem',
+                padding: '0.6rem 0.25rem',
                 outline: 'none',
-                minWidth: 0
+                minWidth: 0,
+                resize: 'none',
+                overflowY: 'auto',
+                lineHeight: '1.4',
+                maxHeight: '150px'
               }}
             />
           )}
           
           {canSend && !isRecording ? (
             <button 
-              type="submit" 
+              type="button" 
               className="icon-button"
+              onClick={() => handleSubmit()}
               disabled={isSubmitting}
               aria-label="Send observation"
               style={{ 
@@ -212,7 +231,9 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 2px 10px rgba(59, 130, 246, 0.4)',
-                transform: isSubmitting ? 'scale(0.95)' : 'scale(1)'
+                transform: isSubmitting ? 'scale(0.95)' : 'scale(1)',
+                marginBottom: '2px',
+                marginLeft: '4px'
               }}
             >
               <Send size={18} strokeWidth={2} />
@@ -231,7 +252,9 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                animation: isRecording ? 'pulseStar 1.5s ease-in-out infinite' : 'none'
+                animation: isRecording ? 'pulseStar 1.5s ease-in-out infinite' : 'none',
+                marginBottom: '2px',
+                marginLeft: '4px'
               }}
             >
               {isRecording ? <Square size={18} fill="currentColor" /> : <Mic size={20} strokeWidth={1.75} />}
@@ -283,5 +306,3 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
     </div>
   );
 };
-
-
