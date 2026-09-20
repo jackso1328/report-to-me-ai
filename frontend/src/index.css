@@ -270,3 +270,29 @@ input, textarea {
   background-color: var(--surface-hover);
 }
 
+
+.analysis-container {
+  width: 100%;
+  margin: 0 auto;
+  transition: max-width 0.3s ease;
+}
+.analysis-container.wide {
+  max-width: 960px;
+}
+.analysis-container:not(.wide) {
+  max-width: 600px;
+}
+.analysis-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  width: 100%;
+  text-align: left;
+}
+@media (min-width: 850px) {
+  .analysis-grid.two-column {
+    grid-template-columns: 1.1fr 0.9fr;
+    align-items: start;
+  }
+}
+
