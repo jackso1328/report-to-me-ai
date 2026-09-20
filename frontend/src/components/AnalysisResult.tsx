@@ -79,118 +79,158 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ result }) => {
       flexDirection: 'column',
       alignItems: 'center',
       textAlign: 'center',
-      maxWidth: '560px',
+      maxWidth: '600px',
       width: '100%',
       margin: '0 auto',
       padding: '2rem 1.5rem 6rem 1.5rem',
-      gap: '2rem'
+      gap: '1.5rem'
     }}>
       
-      {/* 1. Decision Badge at top to anchor the state */}
       <DecisionBadge path={decision.path} />
 
-      {/* 2. What happened (Understanding) */}
-      <div style={{ width: '100%' }}>
-        <h2 className="display-text" style={{ 
-          fontSize: 'clamp(2rem, 5vw, 2.75rem)', 
-          lineHeight: 1.15,
-          color: 'var(--text-primary)',
-          marginBottom: '0.75rem'
-        }}>
-          {analysis.understanding.summary}
-        </h2>
+      <div style={{ width: '100%', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         
-        {/* Assessment Line immediately below summary */}
+        {/* WHAT HAPPENED */}
+        <div style={{ padding: '0.5rem 0' }}>
+          <h2 style={{ 
+            fontSize: '1.75rem', 
+            lineHeight: 1.3,
+            color: 'var(--text-primary)',
+            fontWeight: 600,
+            marginBottom: '0.5rem'
+          }}>
+            {analysis.understanding?.summary || 'Observation recorded'}
+          </h2>
+          <div style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center',
+            gap: '1rem', 
+            color: 'var(--text-muted)',
+            fontSize: '0.8rem',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            padding: '6px 12px',
+            backgroundColor: 'var(--glass-bg)',
+            borderRadius: '12px',
+            border: '1px solid var(--glass-border)'
+          }}>
+            <span>● {analysis.assessment?.severity || 'Unknown'} risk</span>
+            <span>● {analysis.assessment?.confidence > 0.8 ? 'High' : 'Moderate'} confidence</span>
+          </div>
+        </div>
+
+        {/* GUIDANCE BOX */}
         <div style={{ 
-          display: 'inline-flex', 
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '1.25rem', 
-          color: 'var(--text-muted)',
-          fontSize: '0.75rem',
-          textTransform: 'uppercase',
-          letterSpacing: '1.2px',
-          padding: '8px 16px',
-          backgroundColor: 'var(--glass-bg)',
-          borderRadius: '16px',
-          border: '1px solid var(--glass-border)'
-        }}>
-          <span>● {analysis.assessment.severity} risk</span>
-          <span>● {analysis.assessment.confidence > 0.8 ? 'High' : 'Moderate'} confidence</span>
-        </div>
-      </div>
-
-      {/* 3. What to do (Guidance Box) */}
-      <div style={{ 
-        width: '100%',
-        backgroundColor: boxBg,
-        border: `1px solid ${boxBorder}`,
-        borderRadius: '24px',
-        padding: '2rem',
-        marginTop: '0.5rem',
-        boxShadow: 'var(--glass-shadow)'
-      }}>
-        <p style={{ 
-          color: 'var(--text-muted)', 
-          marginBottom: '1rem', 
-          textTransform: 'uppercase', 
-          fontSize: '0.75rem', 
-          letterSpacing: '1.5px',
-          fontWeight: 600
-        }}>
-          {isHumanReview ? 'Attention Required' : 'What you can do'}
-        </p>
-        <p style={{ 
-          fontSize: 'clamp(1.1rem, 2.5vw, 1.25rem)', 
-          lineHeight: 1.6, 
-          fontWeight: 400,
-          color: 'var(--text-primary)'
-        }}>
-          {isHumanReview 
-            ? 'This observation may need appropriate human attention.' 
-            : analysis.guidance.recommendedAction}
-        </p>
-      </div>
-
-      {/* 4. Why? (Expandable Explanation) */}
-      <details 
-        className="why-details"
-        style={{
           width: '100%',
-          textAlign: 'left',
-          backgroundColor: 'var(--glass-bg)',
-          border: '1px solid var(--glass-border)',
-          borderRadius: '16px',
-          padding: '0.5rem',
-          cursor: 'pointer'
-        }}
-      >
-        <summary style={{
-          padding: '1rem',
-          fontSize: '0.95rem',
-          fontWeight: 500,
-          color: 'var(--text-secondary)',
+          backgroundColor: boxBg,
+          border: `1px solid ${boxBorder}`,
+          borderRadius: '20px',
+          padding: '1.5rem',
+          boxShadow: 'var(--glass-shadow)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          userSelect: 'none',
-          outline: 'none'
+          flexDirection: 'column',
+          gap: '1.25rem'
         }}>
-          Why was this recommended?
-        </summary>
-        <div style={{
-          padding: '0 1rem 1.25rem 1rem',
-          fontSize: '0.9rem',
-          lineHeight: 1.6,
-          color: 'var(--text-secondary)',
-          fontWeight: 400,
-          borderTop: '1px solid var(--border-color)',
-          paddingTop: '1rem',
-          marginTop: '0.25rem'
-        }}>
-          {decision.reasoning}
+          <div>
+            <p style={{ 
+              color: 'var(--text-muted)', 
+              marginBottom: '0.5rem', 
+              textTransform: 'uppercase', 
+              fontSize: '0.75rem', 
+              letterSpacing: '1.5px',
+              fontWeight: 600
+            }}>
+              {isHumanReview ? 'Attention Required' : 'What To Do'}
+            </p>
+            <p style={{ 
+              fontSize: '1.15rem', 
+              lineHeight: 1.6, 
+              color: 'var(--text-primary)'
+            }}>
+              {isHumanReview 
+                ? 'This observation may need appropriate human attention.' 
+                : analysis.guidance?.recommendedAction || 'No specific action recommended.'}
+            </p>
+          </div>
+          
+          {analysis.guidance?.responsibleParty && (
+            <div>
+              <p style={{ 
+                color: 'var(--text-muted)', 
+                marginBottom: '0.25rem', 
+                textTransform: 'uppercase', 
+                fontSize: '0.75rem', 
+                letterSpacing: '1.5px',
+                fontWeight: 600
+              }}>
+                Who Should Handle It
+              </p>
+              <p style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>
+                {analysis.guidance.responsibleParty}
+              </p>
+            </div>
+          )}
+          
+          {/* LOCATION PERMISSION MESSAGE */}
+          <div style={{
+            marginTop: '0.5rem',
+            padding: '1rem',
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            fontSize: '0.9rem',
+            color: 'var(--text-secondary)'
+          }}>
+            <p style={{ 
+              color: 'var(--text-muted)', 
+              marginBottom: '0.25rem', 
+              textTransform: 'uppercase', 
+              fontSize: '0.75rem', 
+              letterSpacing: '1px',
+              fontWeight: 600
+            }}>
+              Report Context
+            </p>
+            <p>Location can be included in the report if you allow location access. This helps the responsible party find the exact spot.</p>
+          </div>
         </div>
-      </details>
+
+        {/* WHY (Expandable) */}
+        <details 
+          className="why-details"
+          style={{
+            width: '100%',
+            backgroundColor: 'var(--glass-bg)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '16px',
+            cursor: 'pointer'
+          }}
+        >
+          <summary style={{
+            padding: '1rem 1.25rem',
+            fontSize: '0.95rem',
+            fontWeight: 500,
+            color: 'var(--text-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            userSelect: 'none',
+            outline: 'none'
+          }}>
+            Why was this recommended?
+          </summary>
+          <div style={{
+            padding: '0 1.25rem 1.25rem 1.25rem',
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            color: 'var(--text-secondary)',
+            borderTop: '1px solid var(--border-color)',
+            paddingTop: '1rem',
+          }}>
+            {decision.reasoning}
+          </div>
+        </details>
+      </div>
 
     </div>
   );

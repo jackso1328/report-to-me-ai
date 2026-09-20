@@ -54,15 +54,15 @@ function App() {
     if (appState === 'polling' && result?.id) {
       // Poll every 2 seconds
       pollInterval = window.setInterval(() => {
-        setProcessingPhase(prev => (prev === 1 ? 2 : 1)); // toggle phases for animation
+        setProcessingPhase(prev => prev + 1);
         pollIncident(result.id);
       }, 2000);
 
-      // Timeout after 30 seconds
+      // Timeout after 180 seconds
       timeout = window.setTimeout(() => {
-        setErrorMsg("Your observation was recorded, but analysis is taking longer than expected. You can check back later.");
+        setErrorMsg("Your observation has been safely recorded. Please try again in a moment.");
         setAppState('error');
-      }, 30000);
+      }, 180000);
     }
 
     return () => {
@@ -187,7 +187,7 @@ function App() {
                   letterSpacing: '0.5px',
                   fontWeight: 400,
                   transition: 'opacity 0.5s ease',
-                  opacity: processingPhase === 1 ? 1 : 0,
+                  opacity: processingPhase < 15 ? 1 : 0,
                   position: 'absolute',
                   marginTop: '4rem'
                 }}>
@@ -199,11 +199,27 @@ function App() {
                   letterSpacing: '0.5px',
                   fontWeight: 400,
                   transition: 'opacity 0.5s ease',
-                  opacity: processingPhase === 2 ? 1 : 0,
+                  opacity: processingPhase >= 15 && processingPhase < 60 ? 1 : 0,
                   position: 'absolute',
-                  marginTop: '4rem'
+                  marginTop: '4rem',
+                  textAlign: 'center'
                 }}>
-                  Evaluating guidance...
+                  Still working on it...<br/>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>This observation is safely recorded. The analysis is taking a little longer than usual.</span>
+                </p>
+                <p style={{
+                  fontSize: '1.2rem',
+                  color: 'var(--text-primary)',
+                  letterSpacing: '0.5px',
+                  fontWeight: 400,
+                  transition: 'opacity 0.5s ease',
+                  opacity: processingPhase >= 60 ? 1 : 0,
+                  position: 'absolute',
+                  marginTop: '4rem',
+                  textAlign: 'center'
+                }}>
+                  Almost there...<br/>
+                  <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>We're still analyzing the observation. You can leave this screen open while we finish.</span>
                 </p>
               </>
             )}
@@ -232,7 +248,7 @@ function App() {
           <div className="animate-fade-in" style={{ textAlign: 'center', maxWidth: '420px', padding: '2rem' }}>
             <div style={{ marginBottom: '1.5rem', fontSize: '2.5rem', color: 'var(--text-muted)' }}>✦</div>
             <p style={{ marginBottom: '0.5rem', color: 'var(--text-primary)', fontSize: '1.1rem', fontWeight: 500 }}>
-              Something interrupted the analysis.
+              We couldn't finish the analysis just yet.
             </p>
             <p style={{ marginBottom: '2.5rem', color: 'var(--text-secondary)', lineHeight: 1.5, fontSize: '0.95rem' }}>
               {errorMsg}
@@ -279,10 +295,8 @@ function App() {
         {/* Result Screen Bottom Reset Action */}
         {appState === 'result' && (
           <div style={{
-            position: 'absolute',
-            bottom: 'max(2rem, env(safe-area-inset-bottom))',
-            left: 0,
-            right: 0,
+            position: 'relative',
+            marginTop: '1rem',
             display: 'flex',
             justifyContent: 'center',
             zIndex: 20
