@@ -108,23 +108,22 @@ If the situation is high or critical risk, the system should not simply give gen
 ---
 
 ## 8. Product Screenshots 📸
-*(Note: These images should be placed in `docs/images/`)*
 
-### Self-Solve
-![Self-Solve workflow](docs/images/self-solve.png)
-*Low-risk observations receive practical guidance without unnecessary escalation.*
+### The Agentic Interface (Dark Mode)
+![What Happened - Dark](docs/images/hero-dark.png)
+*A radically simple interface: "What happened? Tell us what you noticed."*
 
-### Monitor
-![Monitor workflow](docs/images/monitor.png)
-*Repeated observations can contribute to developing incident context, sharing status with the appropriate team.*
+### The Agentic Interface (Light Mode)
+![What Happened - Light](docs/images/hero-light.png)
+*Clean, cinematic typography and layout built with React and Vite.*
 
-### Human Review
-![Human Review workflow](docs/images/human-review.png)
-*High-risk situations move into a controlled human-review workflow, presenting the AI's understanding alongside an operational sidebar.*
+### Human Review Workflow (Dark Mode)
+![Human Review - Dark](docs/images/review-dark.png)
+*High-risk situations route to an operational review dashboard rather than a standard chat.*
 
-### Location & Response
-![Location and Response](docs/images/location-handoff.png)
-*The prototype can request explicit location permission and prepare response context for a human authorizer.*
+### Human Review Workflow (Light Mode)
+![Human Review - Light](docs/images/review-light.png)
+*Displays AI understanding alongside clear operational next steps (location request, responsible personnel).*
 
 ---
 
