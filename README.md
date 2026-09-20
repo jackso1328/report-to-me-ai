@@ -288,9 +288,49 @@ The current prototype demonstrates the decision-support and human-handoff workfl
 * **AI Runtime**: Configured server-side using OpenRouter.
 All secrets (AWS credentials, OpenRouter keys) are strictly managed via AWS configuration and do not exist in the source code or frontend bundles.
 
+## 21. Local Setup / Getting Started 🛠️
+
+To deploy this project to your own AWS account and run the frontend locally:
+
+### Prerequisites
+* AWS CLI installed and configured with appropriate permissions.
+* AWS SAM CLI installed.
+* Node.js (v18+) and npm installed.
+* An [OpenRouter API Key](https://openrouter.ai/).
+
+### Step 1: Deploy the Backend
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/jackso1328/report-to-me-ai.git
+   cd report-to-me-ai
+   ```
+2. Build and deploy the AWS infrastructure using SAM:
+   ```bash
+   sam build
+   sam deploy --guided
+   ```
+3. During the guided deployment, set `AIProvider` to `openrouter`. Note the **ApiUrl** output at the end of the deployment.
+4. Add your OpenRouter API Key securely to the `AiWorkerFunction` Lambda environment variables (or AWS Secrets Manager/SSM, depending on your preferred security posture).
+
+### Step 2: Run the Frontend
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   npm install
+   ```
+2. Configure your environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+3. Edit `.env` and set `VITE_API_URL` to the **ApiUrl** output from your SAM deployment.
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
 ---
 
-## 21. Testing / Evaluation 📊
+## 22. Testing / Evaluation 📊
 The system has been evaluated against various scenarios including:
 * Self-solve routing for benign issues.
 * Pattern correlation for developing incidents.
@@ -301,7 +341,7 @@ The system has been evaluated against various scenarios including:
 
 ---
 
-## 22. Technology Stack
+## 23. Technology Stack
 | Layer | Technologies |
 |-------|--------------|
 | **Frontend** | React, TypeScript, Vite, Vanilla CSS, Lucide React, GitHub Pages |
@@ -314,7 +354,7 @@ The system has been evaluated against various scenarios including:
 
 ---
 
-## 23. Repository Structure
+## 24. Repository Structure
 ```
 report-to-me-ai/
 ├── backend/            # Python Lambda functions, API, models, and Decision Engine
@@ -327,13 +367,13 @@ report-to-me-ai/
 
 ---
 
-## 24. Engineering Trade-offs
+## 25. Engineering Trade-offs
 * **Asynchronous AI**: AI processing is done via SQS to ensure the ingestion API is lightning fast, but this introduces eventual consistency to the frontend (handled via client polling).
 * **OpenSearch vs DynamoDB**: DynamoDB is used for strict transactional state and locking, while OpenSearch provides fuzzy lexical memory. 
 
 ---
 
-## 25. Known Limitations
+## 26. Known Limitations
 This is a prototype boundary:
 * **No Autonomous External Dispatch**: The system prepares handoffs but cannot dial 911 or text responders.
 * **OpenRouter Latency**: Depending on the selected model, inference times can vary.
@@ -342,14 +382,14 @@ This is a prototype boundary:
 
 ---
 
-## 26. Roadmap / Future Vision 🚀
+## 27. Roadmap / Future Vision 🚀
 * **PHASE 1 (Current)**: Observation ingestion, AI understanding, deterministic decision engine, human review, memory.
 * **PHASE 2 (Product Vision)**: Connected response (authenticated identities, responder directory, geospatial matching, notifications).
 * **PHASE 3 (Product Vision)**: Closed-loop agent (assignment, progress tracking, completion verification, outcome learning).
 
 ---
 
-## 27. 3-Minute Demo
+## 28. 3-Minute Demo
 To understand the power of the platform, try this sequence:
 1. **Report a simple problem** ("The faucet is leaking"). Watch the system give self-solve guidance.
 2. **Report a developing issue** ("The elevator sounds like it is grinding again"). Watch it monitor and assign to facilities.
@@ -361,7 +401,7 @@ To understand the power of the platform, try this sequence:
 
 ---
 
-## 28. Design Principles
+## 29. Design Principles
 * Communicate what happened.
 * Communicate how serious it is.
 * Communicate what to do next.
@@ -370,5 +410,5 @@ To understand the power of the platform, try this sequence:
 
 ---
 
-## 29. License
+## 30. License
 Licensed under the MIT License. See [LICENSE](LICENSE) for details.
