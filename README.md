@@ -20,9 +20,27 @@ The frontend prototype is currently deployed and accessible:
 ## 3. The Problem
 **Real-world problems are messy.**
 
-When an incident occurs, a person might know exactly what to do—or they might have no idea. Sometimes they know something is wrong but don't know who to contact. They might make a poor decision because they lack information. Sometimes a situation develops gradually and becomes more serious over time. Other times, the correct response requires an authorized specialist.
+When something goes wrong, the person who notices it may not know exactly what to do.
 
-Current systems assume the reporter knows exactly what bucket the problem belongs in, how serious it is, and what workflow to trigger.
+They may know that something is wrong, but not know how serious it is, who to contact, or what kind of incident it is. They might choose the wrong category, report it to the wrong team, or delay taking action because they simply don't have enough information.
+
+Some situations are even harder because they change over time. What looks like a small issue at first can gradually become a serious incident.
+
+And sometimes, the right response requires an authorized specialist. The person reporting the problem can describe what they see, but they shouldn't be expected to know the technical response.
+
+Yet most existing systems expect the reporter to figure all of this out.
+
+They are expected to know:
+
+What is happening?
+How serious is it?
+Which category does it belong to?
+Who should handle it?
+What action should happen next?
+
+But in the real world, people don't always have these answers.
+
+The system should not expect the reporter to understand the problem completely before asking for help.
 
 ---
 
