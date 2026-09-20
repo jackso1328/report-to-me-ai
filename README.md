@@ -1,266 +1,375 @@
-# Report-to-Me AI
+# Report-to-Me AI 🚀
 
-**AI-powered guidance for understanding real-world observations and deciding what to safely do next.**
+> **Report first. Let the system figure out what happens next.**
 
-Traditional reporting systems are designed merely to collect forms and build backlogs. Report-to-Me AI is an intelligent interface designed to interpret unstructured human observations, assess potential risks, and provide actionable safety guidance. It acts as a digital safety net, evaluating whether an issue can be safely self-resolved, requires longitudinal monitoring, or demands human authorization and intervention.
+Report-to-Me AI is an intelligent, agent-driven incident reporting platform. Instead of forcing users to navigate complex categorical forms or decide which department to contact, the platform simply asks: *What is happening?* 
 
-![AWS](https://img.shields.io/badge/AWS-Serverless-orange)
-![Python 3.10](https://img.shields.io/badge/Python-3.10-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-React-blue)
+The AI interprets the messy reality of the observation, assesses its severity, and determines the safest workflow path—providing immediate guidance, monitoring developing situations, or orchestrating a controlled human handoff for high-risk incidents.
 
-## Why Report-to-Me AI?
+---
 
-Traditional reporting systems primarily collect observations. Generic AI assistants can explain an individual situation, but the model itself should not be trusted to directly control sensitive application workflows. 
+## 2. Live Prototype
+The frontend prototype is currently deployed and accessible:
+- **Public URL**: [https://jackso1328.github.io/report-to-me-ai/](https://jackso1328.github.io/report-to-me-ai/)
 
-Tell Report-to-Me AI what is happening. It helps you understand what you can safely do, what you should monitor, and when appropriate human help is needed.
+> [!NOTE]
+> This is a functional prototype connected to a real AWS backend and AI inference engine. External actions (such as emergency dispatch) are intentionally simulated for safety.
 
-The product follows:
-**Understand → Assess → Guide → Monitor → Escalate when appropriate**
+---
 
-The core architectural principle is:
-**AI interprets. Software decides. Humans authorize sensitive actions.**
+## 3. The Problem
+**Real-world problems are messy.**
 
-## Core Workflow
+When an incident occurs, a person might know exactly what to do—or they might have no idea. Sometimes they know something is wrong but don't know who to contact. They might make a poor decision because they lack information. Sometimes a situation develops gradually and becomes more serious over time. Other times, the correct response requires an authorized specialist.
 
-### Self-solve
-> **"The tap in Classroom 204 is leaking slightly."**
+Current systems assume the reporter knows exactly what bucket the problem belongs in, how serious it is, and what workflow to trigger.
 
-A low-risk, highly actionable observation. The AI assesses this as low severity, and the decision engine routes it to self-solve. The user receives practical guidance on how to secure the area or report it to maintenance, without escalating to an emergency workflow.
+---
 
-### Monitor
-> **"An unfamiliar vehicle has been parked near the rear loading dock for two hours."**
+## 4. The Idea
+The core user experience is radically simplified: **"All I need to do is report what is happening."**
 
-An issue that doesn't pose an immediate risk but may develop into one. The AI flags uncertainty or moderate risk factors. The decision engine routes it to monitor rather than immediately escalating. The system may recall past observations of similar vehicles using its OpenSearch memory.
+The user does not need to know the category, the severity, the responsible team, or the next required action. They simply provide information via text, or optionally attach a photo, video, or audio evidence. 
 
-### Human review
-> **"A loud noise followed by a power outage in the east wing."**
+The AI then understands the situation. 
 
-A higher-risk, sensitive situation. The AI detects critical risk factors and high severity. The deterministic decision engine forces this into a human review queue. The system provides the user with safe guidance but does **not** autonomously contact emergency services or execute sensitive real-world actions.
+---
 
-## Architecture
+## 5. How Report-to-Me AI Works
+Report-to-Me AI is an AI assistant backed by an agentic workflow system. The conceptual workflow is simple:
+
+```mermaid
+flowchart LR
+    A[USER REPORTS] --> B[AI UNDERSTANDS]
+    B --> C[AI ASSESSES]
+    C --> D[SYSTEM DECIDES]
+    D --> E[GUIDE / MONITOR / ESCALATE]
+    E --> F[REVIEW / RESOLUTION]
+```
+
+---
+
+## 6. Agentic Workflow 🤖
+Report-to-Me AI is much more than a chatbot answering questions. It is designed to understand a real-world observation, identify uncertainty, and maintain incident state. 
+
+The conceptual agent loop allows the system to route sensitive situations into human review while preserving an audit-oriented record of decisions:
 
 ```mermaid
 flowchart TD
-    User([User])
+    User([User]) -->|text / photo / context| Agent[Report-to-Me AI]
     
-    subgraph Frontend
-        React[React Web Application]
+    subgraph Core Agent Loop
+        Agent --> Und[Understand]
+        Und --> Ass[Assess Severity]
+        Ass --> Unc[Identify Uncertainty]
+        Unc --> Cor[Correlate History]
+        Cor --> Dec[Determine Response Path]
     end
     
-    subgraph AWS Cloud
-        API[API Gateway]
-        
-        subgraph Lambdas
-            SignalFn[Signal API]
-            PresignFn[Presign API]
-            AIWorker[AI Worker via SQS]
-            Indexer[Memory Indexer]
-        end
-        
-        S3[(Private S3)]
-        DB[(DynamoDB)]
-        Search[(OpenSearch Serverless)]
-        EventBus[EventBridge]
-        
-        subgraph Core Logic
-            AI[OpenRouter Provider]
-            Engine[Decision Engine]
-            Memory[Memory Service]
-        end
+    Dec -->|Low Risk| SelfSolve[Self-Solve]
+    Dec -->|Developing| Monitor[Monitor]
+    Dec -->|High Risk| Review[Human Review]
+    
+    subgraph Human Review Workflow
+        Review --> Loc[Verify Location]
+        Loc --> Resp[Identify Personnel]
+        Resp --> Hand[Prepare Handoff]
+        Hand --> Auth[Human Authorization]
     end
     
-    User -- Submits Observation --> React
-    React -- POST /signals --> API
-    API --> SignalFn
-    SignalFn -- Enqueues Task --> SQS[SQS Queue]
-    SQS --> AIWorker
+    SelfSolve --> Out[Resolution]
+    Monitor --> Out
+    Auth --> Out
+```
+
+---
+
+## 7. Three Response Modes
+The system deterministically routes the AI's structured understanding into one of three distinct modes.
+
+### Low Severity
+If the situation is low-risk, sufficiently understood, and actionable, the AI should not unnecessarily involve other people.
+* **Example**: "The tap in Classroom 204 is leaking slightly."
+* **Response**: The system explains what is happening, what the user can safely do, and who normally handles it.
+* **Path**: `OBSERVATION → UNDERSTAND → LOW RISK → SELF-SOLVE GUIDANCE`
+
+### Medium / Developing
+If the situation is not an emergency but may require responsible-party involvement or monitoring over time.
+* **Example**: "The ceiling fan in Classroom 204 has been making a strange noise repeatedly over several days."
+* **Response**: The system identifies the relevant responsible team, prepares the incident information, and maintains context to monitor repeated observations.
+* **Path**: `OBSERVATION → CORRELATE → DEVELOPING ISSUE → MONITOR / RESPONSIBLE TEAM`
+
+### High / Critical
+If the situation is high or critical risk, the system should not simply give generic advice. It must clearly communicate the risk, identify the appropriate responsible personnel, and safely stage a human handoff.
+* **Example**: "There is an active physical fight near the main gate and someone may be injured."
+* **Response**: Provides immediate safe guidance, requests explicit location permission, identifies the responsible role, and routes the case to human review.
+* **Path**: `OBSERVATION → HIGH/CRITICAL RISK → IMMEDIATE GUIDANCE → LOCATION / CONTEXT → RESPONSIBLE PERSONNEL → HUMAN HANDOFF → HUMAN AUTHORIZATION`
+
+---
+
+## 8. Product Screenshots 📸
+*(Note: These images should be placed in `docs/images/`)*
+
+### Self-Solve
+![Self-Solve workflow](docs/images/self-solve.png)
+*Low-risk observations receive practical guidance without unnecessary escalation.*
+
+### Monitor
+![Monitor workflow](docs/images/monitor.png)
+*Repeated observations can contribute to developing incident context, sharing status with the appropriate team.*
+
+### Human Review
+![Human Review workflow](docs/images/human-review.png)
+*High-risk situations move into a controlled human-review workflow, presenting the AI's understanding alongside an operational sidebar.*
+
+### Location & Response
+![Location and Response](docs/images/location-handoff.png)
+*The prototype can request explicit location permission and prepare response context for a human authorizer.*
+
+---
+
+## 9. What Makes It Different
+> **AI interprets. Software decides. Humans authorize sensitive actions.**
+
+This distinction is the strongest technical principle in the project. The AI model is highly capable of interpreting messy real-world observations. However, **the model is not the workflow authority**. 
+
+The model does not directly dispatch emergency services, contact arbitrary people, or change critical workflow state. Instead, AI outputs structured JSON, which is validated, checked against safety policies, and passed to a deterministic decision engine.
+
+---
+
+## 10. AWS Architecture ☁️
+The backend is a robust, event-driven serverless architecture built on AWS.
+
+```mermaid
+flowchart TD
+    UI[React Frontend / GitHub Pages] --> API[API Gateway]
+    UI -.->|Upload Evidence| S3[(S3 Bucket)]
     
-    AIWorker --> AI
-    AI -. Structured Assessment .-> AIWorker
-    AIWorker <--> Memory
-    Memory <--> Search
-    AIWorker --> Engine
+    API --> Ingest[Lambda Ingestion]
+    Ingest --> DDB[(DynamoDB)]
     
-    Engine -- Routes workflow --> DB
-    AIWorker -- Updates Incident --> DB
+    DDB --> Stream[DynamoDB Streams]
+    Stream --> EB{EventBridge}
     
-    DB -- DynamoDB Streams --> StreamPub[Stream Publisher]
-    StreamPub --> EventBus
-    EventBus -- Routes to Indexer --> Indexer
-    Indexer -- Syncs to --> Search
+    EB -->|SignalCreated| SQS[SQS Queue]
+    SQS -.->|Failure| DLQ[DLQ]
+    
+    SQS --> AIWorker[AI Worker Lambda]
+    AIWorker --> OR[OpenRouter Runtime]
+    AIWorker --> Schema[Schema Validation]
+    AIWorker --> Safety[Safety / Policy Gate]
+    AIWorker --> Decision[Decision Engine]
+    AIWorker --> DDB
+    
+    EB -->|IncidentUpdated| Indexer[Memory Indexer]
+    Indexer --> OpenSearch[(OpenSearch Serverless)]
+    
+    EB -->|HumanReviewRequired| StepFunctions[[Step Functions]]
+    StepFunctions -->|Long-running| HumanAuth[Human Authorization]
 ```
 
-### AI Pipeline & Provider
+### Infrastructure Components
+| AWS Service | What It Does | Why It Exists |
+|-------------|--------------|---------------|
+| **API Gateway** | Public HTTP API boundary. | Provides secure HTTP access to backend functions. |
+| **Lambda** | Serverless compute. | Handles ingestion, AI orchestration, and memory indexing. |
+| **DynamoDB** | Incident/Signal state. | Acts as the authoritative source of truth. |
+| **DynamoDB Streams** | Change Data Capture. | Turns persisted state changes into events. |
+| **EventBridge** | Domain event router. | Decouples downstream capabilities (AI, indexing, workflows). |
+| **SQS** | Message queue. | Asynchronous AI processing prevents blocking the ingestion path. |
+| **DLQ** | Dead Letter Queue. | Captures failed processing for investigation and recovery. |
+| **S3** | Evidence storage. | Private bucket for large media uploads via presigned URLs. |
+| **Step Functions** | State Machine. | Orchestrates long-running human-review workflows safely. |
+| **OpenSearch Serverless** | Vector/Search database. | Provides derived search and incident memory projection. |
+| **CloudWatch** | Observability. | Logging and operational visibility. |
+| **AWS SAM** | Infrastructure as Code. | Reproducible, template-driven deployment. |
 
-The AI Analysis Layer uses a provider abstraction. The current runtime configuration uses **OpenRouter** as the primary inference path to interpret unstructured text and provide structured JSON schema output. The AI strictly interprets the situation—it does not make the final decision.
+---
 
-### Decision Engine
+## 11. Why This Architecture?
+* **Why DynamoDB?** It is the authoritative, durable source of truth for incident state.
+* **Why SQS?** AI inference is asynchronous and should not block the public ingestion path.
+* **Why EventBridge?** Domain events allow new downstream capabilities to be added without coupling to the ingestion API.
+* **Why Step Functions?** Human review is a long-running workflow that may pause until an authorized decision is made.
+* **Why OpenSearch?** It provides a derived search/memory projection while DynamoDB remains the authoritative datastore.
+* **Why S3 Presigned Uploads?** Large evidence files do not need to pass through API Gateway or Lambda directly.
 
-The AI model does not directly control the final workflow state. It acts strictly as an analytical input layer:
+---
 
-```text
-AI Provider (OpenRouter)
- ├── understands context
- ├── classifies category
- ├── assesses severity
- └── recommends guidance
-         │
-         ▼
-Deterministic Decision Engine
- ├── self_solve
- ├── monitor
- └── human_review
+## 12. AI Architecture 🧠
+The system currently uses **OpenRouter** as the inference runtime (utilizing models like Nex N2.5 Pro Free).
+The AI is completely abstracted behind a data contract. The `AiWorkerFunction` constructs the context, calls the AI, forces structural compliance, and passes the output to the Decision Engine.
+
+---
+
+## 13. Decision Engine
+The Decision Engine is a deterministic piece of software. It evaluates the AI's structured assessment (severity, confidence, risk factors) against hardcoded policies to determine the final workflow path (`self_solve`, `monitor`, or `human_review`).
+
+---
+
+## 14. Safety by Design 🛡️
+* **Backend-only secrets**: No API keys are exposed to the frontend.
+* **Least privilege IAM**: SAM roles are strictly scoped.
+* **Structured AI validation**: AI outputs are strictly coerced and validated against Pydantic schemas.
+* **Deterministic Engine**: High-risk situations do not become autonomous AI actions.
+
+---
+
+## 15. Human Review / Handoff 🤝
+When the Decision Engine routes an incident to `human_review`, EventBridge triggers a Step Functions execution. This workflow pauses execution until a human authorizer reviews the incident via a dedicated API (`PATCH /api/v1/incidents/{id}/review`). This guarantees the AI can only *prepare* a response, not execute it.
+
+---
+
+## 16. Data Model
+```mermaid
+erDiagram
+    SIGNAL ||--o{ EVIDENCE : contains
+    SIGNAL }o--|| INCIDENT : feeds
+    INCIDENT ||--o{ ASSESSMENT : has
+    INCIDENT ||--o{ DECISION : triggers
+    INCIDENT ||--o| REVIEW : awaits
+```
+* **SIGNAL**: Raw user observation/evidence.
+* **INCIDENT**: The AI-understood situation.
+* **ASSESSMENT**: Severity, confidence and risk factors.
+* **DECISION**: The deterministic workflow path.
+* **REVIEW**: The human authorization state.
+
+---
+
+## 17. AI Data Contract
+The AI output itself does not directly become workflow authority. It is structured JSON:
+
+```json
+{
+  "classification": {
+    "category": "maintenance",
+    "eventType": "equipment_issue"
+  },
+  "understanding": {
+    "summary": "Water is leaking from the sink in the third floor restroom."
+  },
+  "assessment": {
+    "severity": "medium",
+    "confidence": 0.91
+  },
+  "guidance": {
+    "recommendedAction": "Place a bucket under the leak if safe.",
+    "responsibleParty": "Facilities Management",
+    "mode": "monitor"
+  },
+  "uncertainty": {
+    "needsClarification": false
+  }
+}
 ```
 
-### Safety Model
+---
 
-- **AI output is structured and validated** against strict schemas before processing.
-- **Deterministic application logic controls routing.** 
-- **AI does not autonomously dispatch police, emergency services, contractors, or other external actors.**
-- **Human authorization is required before sensitive external action.** High-risk situations are forced into a human review queue.
-- **Severity ≠ Confidence.** The system enforces a strict distinction. A high-severity situation assessed with low confidence requires fundamentally different routing than a high-severity situation assessed with high confidence.
+## 18. Product Experience / UI Design
+The UI is designed around an **agent workspace** rather than a traditional form.
+* **Low risk**: Focuses on actionable guidance and reasoning.
+* **Medium risk**: Displays response status and identifies the responsible team.
+* **High/Critical risk**: Switches to a wide two-column operational layout (on desktop) featuring clear cards for Human Response Required, Location, Responsible Personnel, and Human Handoff authorization. Location is explicitly requested via browser permission.
 
-## AWS Architecture
+---
 
-The repository defines an AWS serverless architecture using:
+## 19. What Works Today (Prototype vs Product Vision)
+**CURRENT PROTOTYPE:**
+The repository implements observation ingestion (text/images via S3), AI understanding, schema validation, the deterministic decision engine, DynamoDB state management, OpenSearch memory indexing, the Step Functions human-review workflow, and a responsive React frontend with explicit location collection.
 
-| AWS Service | Purpose |
-|-------------|---------|
-| **API Gateway** | Managed serverless HTTP entry point supporting CORS and routing. |
-| **AWS Lambda** | Event-driven execution without always-on servers. |
-| **DynamoDB** | Serverless low-latency structured persistence acting as the absolute source of truth. |
-| **S3** | Durable object storage enabling direct, secure browser uploads (evidence). |
-| **SQS** | Asynchronous decoupling for AI inference with Dead-Letter Queues for failed processing. |
-| **DynamoDB Streams & EventBridge** | Event-driven architecture for reacting to incident state changes. |
-| **Step Functions** | Orchestrates secure human review and immutable auditing workflows. |
-| **OpenSearch Serverless** | A derived search/memory projection (Lexical/BM25) for querying historical incidents. |
-| **AWS SAM** | Reproducible infrastructure as code for serverless resources. |
+**PRODUCT VISION:**
+The current prototype demonstrates the decision-support and human-handoff workflow. In a production version, the agent could integrate with authenticated responder directories, geospatial service matching, and two-way notification systems. Production integrations would extend this into a closed-loop agent capable of coordinating authorized external actions.
 
-## Data Model & Response Packet
+---
 
-The backend utilizes DynamoDB Single-Table Design as the authoritative source of truth. OpenSearch Serverless acts solely as a derived projection for historical search. 
+## 20. Deployment
+* **Frontend**: Hosted globally via GitHub Pages.
+* **Backend**: Deployed serverlessly via AWS SAM / CloudFormation.
+* **AI Runtime**: Configured server-side using OpenRouter.
+All secrets (AWS credentials, OpenRouter keys) are strictly managed via AWS configuration and do not exist in the source code or frontend bundles.
 
-When a new observation arrives, the AI pipeline queries OpenSearch via BM25 lexical search to retrieve a `Response Packet`—a structured memory of related past incidents. This provides the AI with institutional memory, allowing it to provide contextual guidance based on historical data.
+---
 
-**Key Schema Overview (DynamoDB):**
-- `PK: INCIDENT#<incidentId>`, `SK: META` (Incident State)
-- `PK: INCIDENT#<incidentId>`, `SK: SIGNAL#<signalId>` (Raw Signal Payload)
-- `PK: INCIDENT#<incidentId>`, `SK: PACKET#<packetId>` (Immutable Response Packet)
-- `PK: SIGNAL#<signalId>`, `SK: META` (Pointer for direct signal lookups)
+## 21. Testing / Evaluation 📊
+The system has been evaluated against various scenarios including:
+* Self-solve routing for benign issues.
+* Pattern correlation for developing incidents.
+* High-risk safety escalations requiring human handoff.
+* Policy separation and structured output adherence.
 
-## Evidence Handling
+*(See benchmark reports in the repository for specific evaluation logs)*
 
-Large media payloads are uploaded directly from the browser to an S3 private bucket via server-generated presigned URLs. Media bytes never pass through the Lambda execution boundary, ensuring the compute tier remains lean and extremely fast.
+---
 
-## Security Principles
+## 22. Technology Stack
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | React, TypeScript, Vite, Vanilla CSS, Lucide React, GitHub Pages |
+| **Backend** | Python, AWS Lambda, API Gateway |
+| **Data** | DynamoDB, S3, OpenSearch Serverless |
+| **Eventing** | DynamoDB Streams, EventBridge, SQS, DLQ |
+| **Workflow** | AWS Step Functions |
+| **Infrastructure**| AWS SAM / CloudFormation |
+| **AI** | OpenRouter (Nex N2.5 Pro Free) |
 
-- **Private S3 Storage**: All evidence is stored in buckets that explicitly block public access.
-- **Presigned Uploads**: The backend strictly controls exactly where and how files are uploaded via short-lived AWS presigned URLs.
-- **Server-Generated Object Keys**: S3 keys are securely generated by the server. The browser cannot dictate arbitrary S3 paths.
-- **IAM Scoping**: Each Lambda function operates with strictly scoped least-privilege permissions.
-- **Secrets Management**: No API keys or sensitive credentials are hardcoded or tracked in git.
+---
 
-## Current Implementation
-
-The repository currently implements the following:
-- Unstructured text and image evidence ingestion via React frontend.
-- Blob-to-S3 direct presigned uploads.
-- DynamoDB single-table incident persistence.
-- SQS-decoupled AI Worker processing with OpenRouter integration.
-- Deterministic routing decision engine (Self-solve / Monitor / Human-review).
-- EventBridge and Step Functions routing for Human Review.
-- DynamoDB Streams to EventBridge to OpenSearch Serverless indexing pipeline.
-
-## Known Limitations
-
-- **Infrastructure Deployment**: The repository defines an extensive AWS architecture in `template.yaml`. While the infrastructure code is fully implemented, full deployment requires a properly provisioned AWS account with active limits for services like OpenSearch Serverless.
-- **AI Dependencies**: AI output quality and latency depend strictly on the configured external provider (OpenRouter) and model availability.
-- **Search capabilities**: OpenSearch is currently implemented using BM25 lexical search. Semantic/vector search is not yet implemented. Furthermore, OpenSearch is an eventually consistent projection derived from DynamoDB Streams.
-- **External Interfaces**: The system is an internal decision support tool. It does not autonomously contact emergency services or external vendors.
-
-## Local Development
-
-### Prerequisites
-- Node.js 18+
-- Python 3.10
-- AWS CLI
-- AWS SAM CLI (and Docker)
-
-### Backend Deployment
-
-The architecture uses AWS SAM.
-
-```bash
-sam build --use-container
-sam deploy --guided
+## 23. Repository Structure
 ```
-*(The `--use-container` flag ensures Python dependencies are compiled natively for the AWS Lambda Linux runtime.)*
-
-Set your AI provider credentials in the deployed Lambda environments:
-`OPENROUTER_API_KEY=your_key`
-
-After deployment, SAM will output the API Gateway `ApiUrl`. Use this to configure the frontend.
-
-### Frontend
-
-Configure your local environment using the `ApiUrl` output from the SAM deployment.
-
-```bash
-cd frontend
-cp .env.example .env.local
+report-to-me-ai/
+├── backend/            # Python Lambda functions, API, models, and Decision Engine
+├── frontend/           # React / TypeScript Vite application
+├── template.yaml       # AWS SAM Infrastructure as Code definition
+├── samconfig.toml      # Deployment configuration
+├── docs/               # Documentation and images
+└── LICENSE             # MIT License
 ```
 
-Edit `.env.local`:
-```env
-VITE_API_BASE_URL=https://<your-api-id>.execute-api.us-east-1.amazonaws.com/v1/api/v1
-```
+---
 
-Start the Vite dev server:
-```bash
-npm install
-npm run dev
-npm run build
-```
+## 24. Engineering Trade-offs
+* **Asynchronous AI**: AI processing is done via SQS to ensure the ingestion API is lightning fast, but this introduces eventual consistency to the frontend (handled via client polling).
+* **OpenSearch vs DynamoDB**: DynamoDB is used for strict transactional state and locking, while OpenSearch provides fuzzy lexical memory. 
 
-## Testing
+---
 
-Backend tests are run via pytest:
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-pytest
-```
+## 25. Known Limitations
+This is a prototype boundary:
+* **No Autonomous External Dispatch**: The system prepares handoffs but cannot dial 911 or text responders.
+* **OpenRouter Latency**: Depending on the selected model, inference times can vary.
+* **Lexical Memory**: Memory retrieval currently uses BM25/lexical search, not dense vector embedding.
+* **Identity**: The prototype does not yet implement a full authenticated responder directory.
 
-Frontend UI code builds with strongly-typed TypeScript validation via `npm run build`.
+---
 
-## Project Structure
+## 26. Roadmap / Future Vision 🚀
+* **PHASE 1 (Current)**: Observation ingestion, AI understanding, deterministic decision engine, human review, memory.
+* **PHASE 2 (Product Vision)**: Connected response (authenticated identities, responder directory, geospatial matching, notifications).
+* **PHASE 3 (Product Vision)**: Closed-loop agent (assignment, progress tracking, completion verification, outcome learning).
 
-```text
-.
-├── backend/
-│   ├── app/
-│   │   ├── ai/            # OpenRouter provider abstraction
-│   │   ├── api/
-│   │   ├── domain/        # Core Pydantic classes and domain models
-│   │   ├── handlers/      # Lambda entrypoints (API, Indexer, Step Functions)
-│   │   ├── repositories/  # DynamoDB persistence layer
-│   │   ├── services/      # AI Worker, Decision Engine, Memory Service
-│   │   └── utils/
-│   ├── tests/
-│   └── requirements.txt
-├── frontend/
-│   ├── src/               # React / TypeScript Application
-│   └── package.json
-├── template.yaml          # AWS SAM Infrastructure
-└── README.md
-```
+---
 
-## Design Principles
+## 27. 3-Minute Demo
+To understand the power of the platform, try this sequence:
+1. **Report a simple problem** ("The faucet is leaking"). Watch the system give self-solve guidance.
+2. **Report a developing issue** ("The elevator sounds like it is grinding again"). Watch it monitor and assign to facilities.
+3. **Report a high-risk situation** ("There's a fire in the hallway"). Watch it orchestrate the Human Review workflow, request location, identify safety personnel, and stage the human handoff.
 
-- **AI interprets. Software decides. Humans authorize.**
-- **Observation is not automatically an incident.**
-- **Severity is not confidence.**
-- **Repeated observations can reveal developing problems.**
-- **The safest automation is automation with clear boundaries.**
+*AI interprets. Software decides. Humans authorize.*
+
+[Demo Video Placeholder]
+
+---
+
+## 28. Design Principles
+* Communicate what happened.
+* Communicate how serious it is.
+* Communicate what to do next.
+* Communicate who should handle it.
+* Expose what the system is doing behind the scenes.
+
+---
+
+## 29. License
+Licensed under the MIT License. See [LICENSE](LICENSE) for details.
