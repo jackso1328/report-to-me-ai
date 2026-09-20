@@ -273,22 +273,13 @@ The UI is designed around an **agent workspace** rather than a traditional form.
 
 ---
 
-## 19. What Works Today (Prototype vs Product Vision)
-**CURRENT PROTOTYPE:**
-The repository implements observation ingestion (text/images via S3), AI understanding, schema validation, the deterministic decision engine, DynamoDB state management, OpenSearch memory indexing, the Step Functions human-review workflow, and a responsive React frontend with explicit location collection.
-
-**PRODUCT VISION:**
-The current prototype demonstrates the decision-support and human-handoff workflow. In a production version, the agent could integrate with authenticated responder directories, geospatial service matching, and two-way notification systems. Production integrations would extend this into a closed-loop agent capable of coordinating authorized external actions.
-
----
-
-## 20. Deployment
+## 19. Deployment
 * **Frontend**: Hosted globally via GitHub Pages.
 * **Backend**: Deployed serverlessly via AWS SAM / CloudFormation.
 * **AI Runtime**: Configured server-side using OpenRouter.
 All secrets (AWS credentials, OpenRouter keys) are strictly managed via AWS configuration and do not exist in the source code or frontend bundles.
 
-## 21. Local Setup / Getting Started 🛠️
+## 20. Local Setup / Getting Started 🛠️
 
 To deploy this project to your own AWS account and run the frontend locally:
 
@@ -330,7 +321,7 @@ To deploy this project to your own AWS account and run the frontend locally:
 
 ---
 
-## 22. Testing / Evaluation 📊
+## 21. Testing / Evaluation 📊
 The system has been evaluated against various scenarios including:
 * Self-solve routing for benign issues.
 * Pattern correlation for developing incidents.
@@ -341,7 +332,7 @@ The system has been evaluated against various scenarios including:
 
 ---
 
-## 23. Technology Stack
+## 22. Technology Stack
 | Layer | Technologies |
 |-------|--------------|
 | **Frontend** | React, TypeScript, Vite, Vanilla CSS, Lucide React, GitHub Pages |
@@ -354,7 +345,7 @@ The system has been evaluated against various scenarios including:
 
 ---
 
-## 24. Repository Structure
+## 23. Repository Structure
 ```
 report-to-me-ai/
 ├── backend/            # Python Lambda functions, API, models, and Decision Engine
@@ -367,41 +358,13 @@ report-to-me-ai/
 
 ---
 
-## 25. Engineering Trade-offs
+## 24. Engineering Trade-offs
 * **Asynchronous AI**: AI processing is done via SQS to ensure the ingestion API is lightning fast, but this introduces eventual consistency to the frontend (handled via client polling).
 * **OpenSearch vs DynamoDB**: DynamoDB is used for strict transactional state and locking, while OpenSearch provides fuzzy lexical memory. 
 
 ---
 
-## 26. Known Limitations
-This is a prototype boundary:
-* **No Autonomous External Dispatch**: The system prepares handoffs but cannot dial 911 or text responders.
-* **OpenRouter Latency**: Depending on the selected model, inference times can vary.
-* **Lexical Memory**: Memory retrieval currently uses BM25/lexical search, not dense vector embedding.
-* **Identity**: The prototype does not yet implement a full authenticated responder directory.
-
----
-
-## 27. Roadmap / Future Vision 🚀
-* **PHASE 1 (Current)**: Observation ingestion, AI understanding, deterministic decision engine, human review, memory.
-* **PHASE 2 (Product Vision)**: Connected response (authenticated identities, responder directory, geospatial matching, notifications).
-* **PHASE 3 (Product Vision)**: Closed-loop agent (assignment, progress tracking, completion verification, outcome learning).
-
----
-
-## 28. 3-Minute Demo
-To understand the power of the platform, try this sequence:
-1. **Report a simple problem** ("The faucet is leaking"). Watch the system give self-solve guidance.
-2. **Report a developing issue** ("The elevator sounds like it is grinding again"). Watch it monitor and assign to facilities.
-3. **Report a high-risk situation** ("There's a fire in the hallway"). Watch it orchestrate the Human Review workflow, request location, identify safety personnel, and stage the human handoff.
-
-*AI interprets. Software decides. Humans authorize.*
-
-[Demo Video Placeholder]
-
----
-
-## 29. Design Principles
+## 25. Design Principles
 * Communicate what happened.
 * Communicate how serious it is.
 * Communicate what to do next.
@@ -410,5 +373,5 @@ To understand the power of the platform, try this sequence:
 
 ---
 
-## 30. License
+## 26. License
 Licensed under the MIT License. See [LICENSE](LICENSE) for details.
