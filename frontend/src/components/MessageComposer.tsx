@@ -181,6 +181,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({
           ) : (
             <textarea
               ref={inputRef}
+              className="hide-scrollbar"
               rows={1}
               placeholder="Type what you noticed..."
               value={text}
