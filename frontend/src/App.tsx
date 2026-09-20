@@ -146,7 +146,7 @@ function App() {
         onNavigateReview={() => setAppState('reviewQueue')} 
       />
       
-      <div className="content-area">
+      <div className={`content-area ${['result', 'reviewQueue', 'incidentDetail'].includes(appState) ? 'align-top' : ''}`}>
         {appState === 'idle' && (
           <HeroPrompt />
         )}
