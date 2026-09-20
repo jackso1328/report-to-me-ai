@@ -315,7 +315,7 @@ Resources:
       Name: !Sub "data-policy-${Environment}"
       Type: data
       Policy: !Sub >
-        [{"Rules":[{"ResourceType":"collection","Resource":["collection/incident-memory-${Environment}"],"Permission":["aoss:CreateCollectionItems","aoss:DeleteCollectionItems","aoss:UpdateCollectionItems","aoss:DescribeCollectionItems"]},{"ResourceType":"index","Resource":["index/incident-memory-v1/*","index/incident-memory-v1"],"Permission":["aoss:CreateIndex","aoss:DeleteIndex","aoss:UpdateIndex","aoss:DescribeIndex","aoss:ReadDocument","aoss:WriteDocument"]}],"Principal":["${IndexerFunctionRole.Arn}","${AiWorkerFunctionRole.Arn}"]}]
+        [{"Rules":[{"ResourceType":"collection","Resource":["collection/incident-memory-${Environment}"],"Permission":["aoss:*"]},{"ResourceType":"index","Resource":["index/incident-memory-${Environment}/*"],"Permission":["aoss:*"]}],"Principal":["${IndexerFunctionRole.Arn}","${AiWorkerFunctionRole.Arn}"]}]
 
   # EventBridge Rule routing to Memory Indexer
   MemoryIndexerRule:
